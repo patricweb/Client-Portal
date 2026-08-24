@@ -1,0 +1,111 @@
+name: ikira-client-portal
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  working_dir: /var/www/html
+  volumes:
+    - .:/var/www/html
+    - vendor_data:/var/www/html/vendor
+    - node_modules_data:/var/www/html/node_modules
+  environment:
+    APP_ENV: ${APP_ENV:-local}
+    APP_DEBUG: ${APP_DEBUG:-true}
+    APP_URL: ${APP_URL:-http://localhost:8080}
+    DB_CONNECTION: mysql
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_DATABASE: ${DB_DATABASE:-ikira_portal}
+    DB_USERNAME: ${DB_USERNAME:-ikira}
+    DB_PASSWORD: ${DB_PASSWORD:-ikira_local_password}
+    REDIS_CLIENT: phpredis
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    CACHE_STORE: redis
+    QUEUE_CONNECTION: redis
+    SESSION_DRIVER: database
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    container_name: ikira_portal_app
+    ports:
+      - "${APP_PORT:-8080}:80"
+      - "${VITE_PORT:-5173}:5173"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  queue:
+    <<: *app
+    container_name: ikira_portal_queue
+    command: php artisan queue:work --sleep=2 --tries=3 --timeout=120
+    depends_on:
+      app:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    <<: *app
+    container_name: ikira_portal_scheduler
+    command: php artisan schedule:work
+    depends_on:
+      app:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    container_name: ikira_portal_mysql
+    restart: unless-stopped
+    ports:
+      - "${DB_FORWARD_PORT:-3308}:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-ikira_portal}
+      MYSQL_USER: ${DB_USERNAME:-ikira}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-ikira_local_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-ikira_local_root_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-ikira_local_root_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ikira_portal_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_FORWARD_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:
+  vendor_data:
+  node_modules_data:

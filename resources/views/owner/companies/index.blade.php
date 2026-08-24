@@ -1,0 +1,5 @@
+<x-layouts.app title="Clients — Ikira Client Portal">
+    <div class="mb-7 flex items-center justify-between"><div><h1 class="text-3xl font-semibold">Clients</h1><p class="mt-1 text-slate-500">Companies, contacts and portal access.</p></div><a href="{{ route('owner.companies.create') }}" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white">Add client</a></div>
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">@forelse($companies as $company)<a href="{{ route('owner.companies.show', $company) }}" class="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-indigo-300"><div class="flex justify-between gap-3"><div><h2 class="font-semibold">{{ $company->name }}</h2><p class="mt-1 text-sm text-slate-500">{{ $company->email ?: 'No company email' }}</p></div><span class="text-sm text-slate-500">{{ $company->projects_count }} projects</span></div><p class="mt-5 text-sm text-slate-500">{{ $company->timezone }} · {{ $company->currency }}</p></a>@empty<p class="text-slate-500">Create your first client company.</p>@endforelse</div><div class="mt-5">{{ $companies->links() }}</div>
+</x-layouts.app>
+
