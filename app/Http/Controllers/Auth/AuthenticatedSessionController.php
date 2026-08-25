@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Enums\AccountStatus;
 use App\Http\Controllers\Controller;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,12 +35,14 @@ class AuthenticatedSessionController extends Controller
         }
 
         $user->update(['last_login_at' => now()]);
+        app(ActivityLogger::class)->log('auth.login', 'Signed in to the portal.', $user, 'internal');
 
-        return redirect()->intended($user->isOwner() ? route('owner.dashboard') : route('client.dashboard'));
+        return redirect()->intended($user->isStaff() ? route('owner.dashboard') : route('client.dashboard'));
     }
 
     public function destroy(Request $request): RedirectResponse
     {
+        app(ActivityLogger::class)->log('auth.logout', 'Signed out of the portal.', $request->user(), 'internal');
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

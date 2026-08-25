@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\BriefTemplate;
+use App\Models\DocumentTemplate;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -74,5 +75,23 @@ class DatabaseSeeder extends Seeder
                 );
             }
         }
+
+        DocumentTemplate::updateOrCreate(
+            ['name' => 'Standard Proposal'],
+            [
+                'type' => 'proposal',
+                'is_active' => true,
+                'content' => '<h2>Project proposal for {{company.name}}</h2><p>Prepared for {{contact.name}} on {{today}}.</p><h3>Project</h3><p>{{project.name}}</p><p>{{project.description}}</p><h3>Scope</h3><p>{{project.scope}}</p><h3>Exclusions</h3><p>{{project.exclusions}}</p><h3>Investment</h3><p>{{project.price}}</p><p>This template must be reviewed and completed before it is sent.</p>',
+            ]
+        );
+
+        DocumentTemplate::updateOrCreate(
+            ['name' => 'Standard Contract'],
+            [
+                'type' => 'contract',
+                'is_active' => true,
+                'content' => '<h2>Service agreement</h2><p>This agreement is between Ikira Company and {{company.billing_name}} for {{project.name}}.</p><h3>Scope</h3><p>{{project.scope}}</p><h3>Fees</h3><p>{{project.price}}</p><p><strong>Legal review required:</strong> replace this placeholder with counsel-approved terms before production use.</p>',
+            ]
+        );
     }
 }

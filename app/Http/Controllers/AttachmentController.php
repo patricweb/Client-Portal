@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attachment;
+use App\Models\Document;
 use App\Models\Project;
+use App\Models\RequestMessage;
+use App\Models\SupportRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +31,25 @@ class AttachmentController extends Controller
 
     public function download(Request $request, Attachment $attachment): StreamedResponse
     {
+        $document = $attachment->attachable instanceof Document ? $attachment->attachable : null;
+        if ($document) {
+            abort_unless($request->user()->hasPermission('manage_documents') || $document->company_id === $request->user()->company_id, 404);
+
+            return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
+        }
+
+        $supportRequest = $attachment->attachable instanceof SupportRequest
+            ? $attachment->attachable
+            : ($attachment->attachable instanceof RequestMessage ? $attachment->attachable->request : null);
+        if ($supportRequest) {
+            abort_unless($request->user()->hasPermission('manage_requests') || $supportRequest->company_id === $request->user()->company_id, 404);
+            if ($attachment->attachable instanceof RequestMessage && $attachment->attachable->is_internal && ! $request->user()->hasPermission('manage_requests')) {
+                abort(404);
+            }
+
+            return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
+        }
+
         $project = $attachment->attachable instanceof Project
             ? $attachment->attachable
             : ($attachment->attachable?->project ?? null);
@@ -39,6 +61,6 @@ class AttachmentController extends Controller
 
     private function authorizeProject(Request $request, Project $project): void
     {
-        abort_unless($request->user()->isOwner() || $project->company_id === $request->user()->company_id, 404);
+        abort_unless(($request->user()->hasPermission('manage_projects') && $request->user()->canAccessProject($project)) || $project->company_id === $request->user()->company_id, 404);
     }
 }

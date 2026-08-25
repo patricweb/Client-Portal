@@ -1,0 +1,4 @@
+<x-layouts.app title="Documents — Ikira Client Portal">
+    <div class="mb-7"><h1 class="text-3xl font-semibold">Documents</h1><p class="mt-1 text-slate-500">Review proposals, contracts and project documents.</p></div>
+    <div class="grid gap-4">@forelse($documents as $document)<a href="{{ route('client.documents.show', $document) }}" class="rounded-2xl border border-slate-200 bg-white p-5 hover:border-indigo-300"><div class="flex justify-between gap-4"><div><p class="font-semibold">{{ $document->title }}</p><p class="mt-1 text-sm text-slate-500">{{ $document->project?->name ?? str($document->type)->replace('_',' ')->title() }}</p></div><span class="h-fit rounded-full bg-slate-100 px-3 py-1 text-xs">{{ str($document->status)->replace('_',' ')->title() }}</span></div></a>@empty<p class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">No documents are available.</p>@endforelse</div>
+</x-layouts.app>

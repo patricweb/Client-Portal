@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\EnsurePasswordWasChanged;
+use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -14,8 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(AddSecurityHeaders::class);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
+            'permission' => EnsureUserHasPermission::class,
             'password.changed' => EnsurePasswordWasChanged::class,
         ]);
     })

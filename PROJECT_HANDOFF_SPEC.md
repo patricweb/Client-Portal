@@ -299,6 +299,11 @@ docker compose down
 
 ```text
 owner
+admin
+project_manager
+developer
+support
+accountant
 client
 ```
 
@@ -413,6 +418,41 @@ blocked
 - безопасное скачивание файлов;
 - запрет клиенту видеть проект другой компании.
 
+### Этапы 4–6 — Documents, Billing и Care & Support
+
+Реализовано:
+
+- Document Templates с подстановкой Company, Contact и Project data;
+- Documents и immutable Document Versions;
+- Proposal send/accept/request changes workflow;
+- Contract PDF download и загрузка подписанного PDF;
+- polymorphic Approvals для Documents и Project Stages;
+- audit metadata решения: version, user, timestamp, IP и user agent;
+- PDF generation через `dompdf/dompdf`;
+- Payment Schedules с fixed/percentage milestones и trigger stage;
+- Invoices с последовательными номерами, line items, discount, PDF и overdue status;
+- отдельные Payments, partial payments и автоматический paid status;
+- void вместо hard delete для Invoices;
+- Client Billing с totals, paid, remaining и payment history;
+- Care & Support Plans, included services и support-minute usage;
+- ручные technical statuses, maintenance/backup activity;
+- scheduler command `care:generate-invoices`, создающий draft recurring invoices;
+- Policies и client isolation для Documents, Invoices и Care Plans.
+
+### Этапы 7–11 — Requests, Notifications, Activity, Team и Production
+
+Реализовано:
+
+- Requests, public messages, internal notes, attachments и external communications;
+- billing classification, Change Order draft и списание Care minutes при завершении;
+- Portal, queued Email и Telegram delivery с журналом попыток и индивидуальными настройками;
+- Activity Log с public/internal visibility, actor/IP/user agent и безопасной фильтрацией полей;
+- обязательная причина и audit event для Owner approval override;
+- роли Owner, Admin, Project Manager, Developer, Support, Accountant и Client;
+- permission middleware, приглашение сотрудников, suspension и назначения по проектам;
+- login rate limiting, security headers и пользовательские error pages;
+- production Compose, healthcheck, queue/scheduler, backup/restore scripts и deployment runbook.
+
 ---
 
 ## 9. Текущая навигация
@@ -424,6 +464,12 @@ Today
 Leads
 Clients
 Projects
+Documents
+Invoices
+Care & Support
+Requests
+Activity
+Team
 ```
 
 ### Client
@@ -431,9 +477,14 @@ Projects
 ```text
 Home
 Projects
+Documents
+Billing
+Care & Support
+Requests
+Updates
 ```
 
-В следующих этапах навигация должна расшириться.
+Owner navigation фильтруется по permissions текущей роли.
 
 План Owner navigation:
 
@@ -490,6 +541,17 @@ brief_template_fields
 project_briefs
 brief_answers
 attachments
+document_templates
+documents
+document_versions
+approvals
+payment_schedules
+payment_schedule_items
+invoices
+invoice_items
+payments
+care_plans
+care_activities
 ```
 
 ### User
@@ -593,9 +655,11 @@ approved
 
 ---
 
-## 11. Следующие этапы разработки
+## 11. Этапы разработки
 
 ## Этап 4 — Documents и Approvals
+
+Статус: реализован.
 
 Это следующий обязательный этап.
 
@@ -716,6 +780,8 @@ Request Changes
 
 ## Этап 5 — Payment Schedule, Invoices и Payments
 
+Статус: реализован.
+
 ### 5.1 Payment Schedule
 
 Для каждого проекта используется индивидуальный график.
@@ -816,6 +882,8 @@ Payment хранится отдельно от Invoice:
 ---
 
 ## Этап 6 — Care & Support
+
+Статус: реализован.
 
 Общее название используется вместо только `Website Care`, поскольку система обслуживает websites, web apps и Telegram bots.
 
@@ -1210,8 +1278,8 @@ We are currently working on Development.
 
 Текущий набор:
 
-- 9 tests;
-- 23 assertions;
+- 25 tests;
+- 86 assertions;
 - Owner login;
 - password reset request;
 - temporary password enforcement;
@@ -1279,26 +1347,11 @@ Lead created
 
 ---
 
-## 17. Рекомендуемый порядок продолжения
+## 17. Дальнейшее развитие после MVP
 
-Продолжать строго в этом порядке:
+Базовые этапы 1–11 завершены. Перед реальным production launch выполнить внешний deployment checklist из `DEPLOYMENT.md`: подключить домен/TLS, реальные SMTP/Telegram/S3 credentials, провести legal review шаблонов и сделать пробное восстановление backup.
 
-```text
-4. Documents + Approvals
-5. Payment Schedule + Invoices + Payments
-6. Care & Support
-7. Requests + Messages
-8. Portal + Email + Telegram Notifications
-9. Activity Log
-10. Team Roles + Permissions
-11. Production Readiness
-```
-
-Не начинать online payments, electronic signature или automatic monitoring до завершения базового MVP.
-
-Следующая непосредственная задача:
-
-> Спроектировать и реализовать Documents, Document Templates, immutable Document Versions, Proposal workflow, Contract upload и polymorphic Approvals с клиентскими экранами и автоматическими тестами.
+После запуска можно планировать online payments, electronic signature и automatic monitoring как отдельные интеграции.
 
 ---
 
@@ -1323,7 +1376,10 @@ database/seeders/DatabaseSeeder.php
 resources/views/
 tests/TestCase.php
 tests/Feature/PortalWorkflowTest.php
+tests/Feature/StagesFourToSixTest.php
+tests/Feature/StagesSevenToElevenTest.php
+DEPLOYMENT.md
+tests/Feature/StagesFourToSixTest.php
 ```
 
 Перед изменением структуры необходимо сначала изучить существующие migrations, relationships, middleware и tests.
-

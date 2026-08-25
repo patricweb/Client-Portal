@@ -43,8 +43,10 @@ docker compose exec app php artisan migrate
 ```bash
 docker compose exec app php artisan test
 docker compose exec app php artisan migrate:fresh --seed
+docker compose exec app php artisan care:generate-invoices
 docker compose exec app npm run dev -- --host 0.0.0.0
 docker compose logs -f app queue scheduler
+./docker/backup.ps1
 ```
 
 ## Services
@@ -63,3 +65,7 @@ Default ports can be changed in `.env`:
 - Redis: `6380`
 
 The credentials in `.env.example` are for local development only. Replace all secrets before deployment.
+
+## Production
+
+Use [DEPLOYMENT.md](DEPLOYMENT.md) and `docker-compose.production.yml`. Production launch requires an external HTTPS reverse proxy, real SMTP/Telegram/storage credentials, strong secrets, and a verified database restore test.

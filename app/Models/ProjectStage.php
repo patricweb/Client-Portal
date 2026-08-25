@@ -22,4 +22,9 @@ class ProjectStage extends Model
     {
         return $this->morphMany(Attachment::class, 'attachable');
     }
+
+    public function approvals()
+    {
+        return $this->morphMany(Approval::class, 'approvable')->latest('decided_at');
+    }
 }

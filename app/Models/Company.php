@@ -26,4 +26,24 @@ class Company extends Model
     {
         return $this->hasMany(Project::class);
     }
+
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function carePlans()
+    {
+        return $this->hasMany(CarePlan::class);
+    }
+
+    public function requests()
+    {
+        return $this->hasMany(SupportRequest::class);
+    }
 }

@@ -10,7 +10,10 @@ class EnsureUserHasRole
 {
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        abort_unless($request->user()?->role->value === $role, 403);
+        $allowed = $role === 'staff'
+            ? $request->user()?->isStaff()
+            : $request->user()?->role->value === $role;
+        abort_unless($allowed, 403);
 
         return $next($request);
     }

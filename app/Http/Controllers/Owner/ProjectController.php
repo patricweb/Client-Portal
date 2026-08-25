@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Owner;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\BriefTemplate;
 use App\Models\Company;
 use App\Models\Project;
 use App\Models\ProjectStage;
 use App\Models\WorkflowTemplate;
+use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,9 +18,14 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('owner.projects.index', ['projects' => Project::with('company')->latest()->paginate(20)]);
+        $query = Project::with('company')->latest();
+        if (! in_array($request->user()->role, [UserRole::Owner, UserRole::Admin], true)) {
+            $query->whereHas('teamMembers', fn ($team) => $team->whereKey($request->user()->id));
+        }
+
+        return view('owner.projects.index', ['projects' => $query->paginate(20)]);
     }
 
     public function create(): View
@@ -56,16 +63,43 @@ class ProjectController extends Controller
         return redirect()->route('owner.projects.show', $project)->with('success', 'Project created.');
     }
 
-    public function show(Project $project): View
+    public function show(Request $request, Project $project): View
     {
+        abort_unless($request->user()->canAccessProject($project), 404);
+
         return view('owner.projects.show', ['project' => $project->load(['company.contacts', 'stages', 'brief.answers.field', 'attachments'])]);
     }
 
     public function updateStage(Request $request, Project $project, ProjectStage $stage): RedirectResponse
     {
         abort_unless($stage->project_id === $project->id, 404);
-        $data = $request->validate(['status' => ['required', 'string'], 'due_date' => ['nullable', 'date']]);
-        $stage->update($data + ['approved_at' => $data['status'] === 'approved' ? now() : null]);
+        abort_unless($request->user()->canAccessProject($project), 404);
+        $data = $request->validate([
+            'status' => ['required', 'string'],
+            'due_date' => ['nullable', 'date'],
+            'override_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+        $isOverride = $stage->requires_approval && in_array($data['status'], ['approved', 'completed'], true);
+        if ($isOverride) {
+            $request->validate(['override_reason' => ['required', 'string', 'min:5', 'max:1000']]);
+        }
+
+        $stage->update([
+            'status' => $data['status'],
+            'due_date' => $data['due_date'] ?? null,
+            'approved_at' => $data['status'] === 'approved' ? now() : null,
+        ]);
+        if ($isOverride) {
+            app(ActivityLogger::class)->log(
+                'project_stage.owner_override',
+                'Approval requirement overridden: '.$data['override_reason'],
+                $stage,
+                'internal',
+                ['reason' => $data['override_reason']],
+                $project->company_id,
+                $project->id,
+            );
+        }
 
         $completed = $project->stages()->whereIn('status', ['approved', 'completed'])->count();
         $total = max(1, $project->stages()->count());

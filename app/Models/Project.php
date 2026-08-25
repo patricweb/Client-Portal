@@ -45,6 +45,36 @@ class Project extends Model
         return $this->morphMany(Attachment::class, 'attachable');
     }
 
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    public function paymentSchedule()
+    {
+        return $this->hasOne(PaymentSchedule::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function carePlans()
+    {
+        return $this->hasMany(CarePlan::class);
+    }
+
+    public function requests()
+    {
+        return $this->hasMany(SupportRequest::class);
+    }
+
+    public function teamMembers()
+    {
+        return $this->belongsToMany(User::class)->withPivot('assigned_by')->withTimestamps();
+    }
+
     public function currentStage(): ?ProjectStage
     {
         return $this->stages->first(fn (ProjectStage $stage) => ! in_array($stage->status, ['approved', 'completed'], true));

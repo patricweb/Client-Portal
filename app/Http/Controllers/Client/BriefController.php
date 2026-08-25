@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -45,6 +47,10 @@ class BriefController extends Controller
             if ($project->status === 'awaiting_brief') {
                 $project->update(['status' => 'awaiting_contract']);
             }
+            app(NotificationService::class)->send(
+                User::where('role', 'owner')->get(), 'brief_submitted', 'action_required',
+                'Brief submitted', $project->name, route('owner.projects.show', $project)
+            );
 
             return redirect()->route('client.projects.show', $project)->with('success', 'Brief submitted to Ikira.');
         }

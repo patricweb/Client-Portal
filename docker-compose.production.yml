@@ -1,0 +1,79 @@
+name: ikira-client-portal-production
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      COMPOSER_INSTALL_FLAGS: --no-dev
+  restart: unless-stopped
+  working_dir: /var/www/html
+  entrypoint: /var/www/html/docker/production-entrypoint.sh
+  env_file: ${ENV_FILE:-.env.production}
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    DB_HOST: mysql
+    REDIS_HOST: redis
+    CACHE_STORE: redis
+    QUEUE_CONNECTION: redis
+    SESSION_DRIVER: database
+  volumes:
+    - storage_data:/var/www/html/storage/app
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    ports:
+      - "${APP_PORT:-8080}:80"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  queue:
+    <<: *app
+    command: php artisan queue:work --sleep=2 --tries=3 --timeout=120 --max-time=3600
+
+  scheduler:
+    <<: *app
+    command: php artisan schedule:work
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env.production}
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:
+  storage_data:

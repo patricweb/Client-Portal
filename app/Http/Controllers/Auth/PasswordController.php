@@ -29,7 +29,7 @@ class PasswordController extends Controller
             'status' => AccountStatus::Active,
         ]);
 
-        return redirect()->route($request->user()->isOwner() ? 'owner.dashboard' : 'client.dashboard')
+        return redirect()->route($request->user()->isStaff() ? 'owner.dashboard' : 'client.dashboard')
             ->with('success', 'Your password has been updated.');
     }
 }
