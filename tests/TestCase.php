@@ -17,6 +17,8 @@ abstract class TestCase extends BaseTestCase
             'MAIL_MAILER' => 'array',
             'QUEUE_CONNECTION' => 'sync',
             'SESSION_DRIVER' => 'array',
+            'TELEGRAM_BOT_TOKEN' => '',
+            'TELEGRAM_OWNER_CHAT_ID' => '',
         ];
 
         foreach ($environment as $key => $value) {

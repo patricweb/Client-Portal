@@ -11,3 +11,8 @@ storage/framework/sessions/*
 storage/framework/views/*
 public/storage
 public/build
+tmp
+output
+scripts/__pycache__
+storage/app/private/*
+storage/framework/testing/*

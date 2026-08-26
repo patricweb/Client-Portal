@@ -18,11 +18,13 @@ use App\Http\Controllers\Owner\CarePlanController;
 use App\Http\Controllers\Owner\CompanyController;
 use App\Http\Controllers\Owner\DashboardController as OwnerDashboardController;
 use App\Http\Controllers\Owner\DocumentController as OwnerDocumentController;
+use App\Http\Controllers\Owner\DocumentPackController;
 use App\Http\Controllers\Owner\DocumentTemplateController;
 use App\Http\Controllers\Owner\InvoiceController;
 use App\Http\Controllers\Owner\LeadController;
 use App\Http\Controllers\Owner\PaymentScheduleController;
 use App\Http\Controllers\Owner\ProjectController as OwnerProjectController;
+use App\Http\Controllers\Owner\ProviderProfileController;
 use App\Http\Controllers\Owner\SupportRequestController as OwnerSupportRequestController;
 use App\Http\Controllers\Owner\TeamController;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +52,12 @@ Route::middleware('auth')->group(function () {
 
 Route::prefix('owner')->name('owner.')->middleware(['auth', 'password.changed', 'role:staff'])->group(function () {
     Route::get('/', OwnerDashboardController::class)->name('dashboard');
+    Route::get('settings/provider', [ProviderProfileController::class, 'edit'])->middleware('role:owner')->name('settings.provider.edit');
+    Route::put('settings/provider', [ProviderProfileController::class, 'update'])->middleware('role:owner')->name('settings.provider.update');
+    Route::get('document-builder', [DocumentPackController::class, 'create'])->middleware('permission:manage_documents')->name('document-pack.create');
+    Route::post('document-builder', [DocumentPackController::class, 'store'])->middleware('permission:manage_documents')->name('document-pack.store');
+    Route::get('documents/{document}/builder', [DocumentPackController::class, 'edit'])->middleware('permission:manage_documents')->name('document-pack.edit');
+    Route::put('documents/{document}/builder', [DocumentPackController::class, 'update'])->middleware('permission:manage_documents')->name('document-pack.update');
     Route::resource('leads', LeadController::class)->except(['show', 'destroy'])->middleware('permission:manage_leads');
     Route::resource('companies', CompanyController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_clients');
     Route::resource('projects', OwnerProjectController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_projects');
@@ -58,10 +66,12 @@ Route::prefix('owner')->name('owner.')->middleware(['auth', 'password.changed', 
     Route::resource('documents', OwnerDocumentController::class)->only(['index', 'create', 'store', 'show', 'update'])->middleware('permission:manage_documents');
     Route::post('documents/{document}/send', [OwnerDocumentController::class, 'send'])->middleware('permission:manage_documents')->name('documents.send');
     Route::post('documents/{document}/signed', [OwnerDocumentController::class, 'uploadSigned'])->middleware('permission:manage_documents')->name('documents.signed');
+    Route::post('documents/{document}/confirm-signed', [OwnerDocumentController::class, 'confirmSigned'])->middleware('permission:manage_documents')->name('documents.confirm-signed');
     Route::get('documents/{document}/pdf', [OwnerDocumentController::class, 'pdf'])->middleware('permission:manage_documents')->name('documents.pdf');
     Route::resource('document-templates', DocumentTemplateController::class)->only(['index', 'store', 'update'])->middleware('permission:manage_documents');
     Route::resource('invoices', InvoiceController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_billing');
     Route::post('invoices/{invoice}/send', [InvoiceController::class, 'send'])->middleware('permission:manage_billing')->name('invoices.send');
+    Route::post('invoices/{invoice}/refresh-profile', [InvoiceController::class, 'refreshProfile'])->middleware('permission:manage_billing')->name('invoices.refresh-profile');
     Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'payment'])->middleware('permission:manage_billing')->name('invoices.payments.store');
     Route::post('invoices/{invoice}/void', [InvoiceController::class, 'void'])->middleware('permission:manage_billing')->name('invoices.void');
     Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->middleware('permission:manage_billing')->name('invoices.pdf');
@@ -92,6 +102,7 @@ Route::prefix('portal')->name('client.')->middleware(['auth', 'password.changed'
     Route::get('documents', [ClientDocumentController::class, 'index'])->name('documents.index');
     Route::get('documents/{document}', [ClientDocumentController::class, 'show'])->name('documents.show');
     Route::post('documents/{document}/decision', [ClientDocumentController::class, 'decide'])->name('documents.decision');
+    Route::post('documents/{document}/signed', [ClientDocumentController::class, 'uploadSigned'])->name('documents.signed');
     Route::get('documents/{document}/pdf', [ClientDocumentController::class, 'pdf'])->name('documents.pdf');
     Route::post('projects/{project}/stages/{stage}/decision', [ClientDocumentController::class, 'decideStage'])->name('stages.decision');
     Route::get('billing', [ClientBillingController::class, 'index'])->name('billing.index');

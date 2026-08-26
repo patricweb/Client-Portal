@@ -34,6 +34,14 @@ class AttachmentController extends Controller
         $document = $attachment->attachable instanceof Document ? $attachment->attachable : null;
         if ($document) {
             abort_unless($request->user()->hasPermission('manage_documents') || $document->company_id === $request->user()->company_id, 404);
+            if (! $request->user()->hasPermission('manage_documents')) {
+                $this->authorize('view', $document);
+                if ($attachment->document_version_id) {
+                    abort_unless($document->versions()->whereKey($attachment->document_version_id)->whereNotNull('published_at')->exists(), 404);
+                } else {
+                    abort_if(in_array($document->status, ['draft', 'void']), 404);
+                }
+            }
 
             return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
         }

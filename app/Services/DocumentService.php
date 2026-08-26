@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\Project;
+use App\Models\ProviderProfile;
 use Illuminate\Support\Str;
 
 class DocumentService
@@ -33,6 +34,7 @@ class DocumentService
     public function snapshot(Company $company, ?Project $project): array
     {
         return [
+            'provider' => ProviderProfile::current()->details,
             'company' => $company->only(['id', 'name', 'billing_name', 'email', 'billing_address', 'currency']),
             'project' => $project?->only(['id', 'name', 'type', 'description', 'scope', 'exclusions', 'price', 'currency', 'target_completion_date']),
             'generated_at' => now()->toIso8601String(),

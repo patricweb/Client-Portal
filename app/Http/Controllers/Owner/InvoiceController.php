@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Owner;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Project;
+use App\Models\ProviderProfile;
 use App\Models\User;
 use App\Services\InvoiceService;
 use App\Services\NotificationService;
-use Dompdf\Dompdf;
+use App\Services\PortalPdfService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,11 +28,19 @@ class InvoiceController extends Controller
         return view('owner.invoices.index', ['invoices' => Invoice::with(['company', 'project'])->latest()->paginate(25)]);
     }
 
-    public function create(): View
+    public function create(Request $request, InvoiceService $service): View
     {
+        $selectedSow = Document::where('type', 'scope_of_work')->where('status', 'signed')->find($request->input('sow_document_id'));
+        $kind = in_array($request->input('kind'), ['advance', 'final']) ? $request->input('kind') : 'standard';
+        $previouslyInvoiced = $selectedSow ? (float) Invoice::where('sow_document_id', $selectedSow->id)->where('status', '!=', 'void')->sum('total') : 0;
+        $suggestedAmount = $selectedSow ? ($kind === 'advance' ? $service->agreementTotal($selectedSow) / 2 : max(0, $service->agreementTotal($selectedSow) - $previouslyInvoiced)) : null;
+
         return view('owner.invoices.create', [
             'companies' => Company::orderBy('name')->get(),
             'projects' => Project::with('company')->orderBy('name')->get(),
+            'sows' => Document::with('company')->where('type', 'scope_of_work')->where('status', 'signed')->get(),
+            'acceptances' => Document::where('type', 'delivery_acceptance')->whereIn('status', ['accepted', 'accepted_with_minor_items'])->get(),
+            'profile' => ProviderProfile::current(), 'selectedSow' => $selectedSow, 'kind' => $kind, 'suggestedAmount' => $suggestedAmount,
         ]);
     }
 
@@ -41,12 +51,31 @@ class InvoiceController extends Controller
             'company_id' => ['required', 'exists:companies,id'], 'project_id' => ['nullable', 'exists:projects,id'],
             'issue_date' => ['required', 'date'], 'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
             'currency' => ['required', Rule::in(['USD', 'EUR', 'MDL'])], 'discount' => ['nullable', 'numeric', 'min:0'],
+            'kind' => ['nullable', 'in:standard,advance,final'],
+            'sow_document_id' => ['nullable', 'required_if:kind,advance,final', 'exists:documents,id'],
+            'acceptance_document_id' => ['nullable', 'required_if:kind,final', 'exists:documents,id'],
+            'tax_amount' => ['nullable', 'numeric', 'min:0', 'max:999999999'], 'tax_description' => ['nullable', 'string', 'max:2000'],
             'payment_instructions' => ['nullable', 'string'], 'public_notes' => ['nullable', 'string'], 'internal_notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'], 'items.*.description' => ['required', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'numeric', 'gt:0'], 'items.*.unit_price' => ['required', 'numeric', 'min:0'],
         ]);
         $project = isset($data['project_id']) ? Project::findOrFail($data['project_id']) : null;
         abort_if($project && $project->company_id !== (int) $data['company_id'], 422, 'Project does not belong to company.');
+        $sow = isset($data['sow_document_id']) ? Document::findOrFail($data['sow_document_id']) : null;
+        if ($sow) {
+            abort_unless($sow->type === 'scope_of_work' && $sow->company_id === (int) $data['company_id'] && $sow->project_id === $project?->id, 422, 'SOW does not match this client / project.');
+        }
+        $acceptance = isset($data['acceptance_document_id']) ? Document::findOrFail($data['acceptance_document_id']) : null;
+        abort_if($acceptance && ($acceptance->type !== 'delivery_acceptance' || $acceptance->parent_document_id !== $sow?->id), 422, 'Acceptance must refer to the selected SOW.');
+        if ($sow) {
+            $data['snapshot'] = [
+                'provider' => ProviderProfile::current()->details,
+                'company' => Company::findOrFail($data['company_id'])->only(['id', 'name', 'billing_name', 'billing_address', 'email']),
+                'sow_number' => $sow->document_number, 'sow_version' => $sow->current_version,
+                'project_total' => $service->agreementTotal($sow), 'acceptance_number' => $acceptance?->document_number,
+                'acceptance_version' => $acceptance?->current_version,
+            ];
+        }
         $items = $data['items'];
         unset($data['items']);
         $invoice = $service->create($data + ['status' => 'draft', 'discount' => $data['discount'] ?? 0], $items);
@@ -59,10 +88,17 @@ class InvoiceController extends Controller
         return view('owner.invoices.show', ['invoice' => $invoice->load(['company', 'project', 'items', 'payments.recorder'])]);
     }
 
-    public function send(Invoice $invoice): RedirectResponse
+    public function send(Request $request, Invoice $invoice): RedirectResponse
     {
         abort_unless($invoice->status === 'draft', 422);
-        $invoice->update(['status' => 'sent', 'sent_at' => now()]);
+        DB::transaction(function () use ($invoice, $request) {
+            $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
+            abort_unless($invoice->status === 'draft', 422);
+            abort_if($request->filled('snapshot_hash') && ! hash_equals(hash('sha256', json_encode($invoice->snapshot)), (string) $request->input('snapshot_hash')), 409, 'The invoice details changed. Review the current draft before sending.');
+            app(InvoiceService::class)->assertReady($invoice);
+            $invoice->update(['status' => 'sent', 'sent_at' => now()]);
+            app(PortalPdfService::class)->invoice($invoice, true);
+        });
         app(NotificationService::class)->send(
             User::where('company_id', $invoice->company_id)->get(), 'invoice_sent', 'action_required',
             'New invoice', "{$invoice->invoice_number} is due {$invoice->due_date->format('M j, Y')}", route('client.billing.show', $invoice), false
@@ -103,14 +139,26 @@ class InvoiceController extends Controller
     public function pdf(Invoice $invoice): Response
     {
         $invoice->load(['company', 'project', 'items', 'payments']);
-        $dompdf = new Dompdf;
-        $dompdf->loadHtml(view('pdf.invoice', compact('invoice'))->render());
-        $dompdf->setPaper('letter');
-        $dompdf->render();
 
-        return response($dompdf->output(), 200, [
+        return response(app(PortalPdfService::class)->invoice($invoice), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$invoice->invoice_number.'.pdf"',
         ]);
+    }
+
+    public function refreshProfile(Invoice $invoice): RedirectResponse
+    {
+        DB::transaction(function () use ($invoice) {
+            $invoice = Invoice::lockForUpdate()->findOrFail($invoice->id);
+            abort_unless($invoice->status === 'draft', 422);
+            $profile = ProviderProfile::current();
+            $invoice->update([
+                'snapshot' => array_replace($invoice->snapshot ?? [], ['provider' => $profile->details, 'company' => $invoice->company->only(['id', 'name', 'billing_name', 'billing_address', 'email'])]),
+                'payment_instructions' => $profile->paymentInstructions(),
+                'tax_description' => $invoice->tax_description ?: ($profile->details['tax_note'] ?? null),
+            ]);
+        });
+
+        return back()->with('success', 'Draft provider / billing details refreshed. Issued invoices are unchanged.');
     }
 }

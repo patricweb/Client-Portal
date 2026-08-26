@@ -7,10 +7,13 @@ use App\Models\Document;
 use App\Models\Project;
 use App\Models\ProjectStage;
 use App\Models\User;
+use App\Services\DocumentSignatureService;
+use App\Services\DocumentWorkflowService;
 use App\Services\NotificationService;
-use Dompdf\Dompdf;
+use App\Services\PortalPdfService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,7 +22,8 @@ class DocumentController extends Controller
     public function index(Request $request): View
     {
         return view('client.documents.index', ['documents' => Document::with('project')
-            ->where('company_id', $request->user()->company_id)->whereNotIn('status', ['draft', 'void'])->latest()->get()]);
+            ->where('company_id', $request->user()->company_id)->where('status', '!=', 'void')
+            ->where(fn ($query) => $query->where('status', '!=', 'draft')->orWhereHas('versions', fn ($versions) => $versions->whereNotNull('published_at')))->latest()->get()]);
     }
 
     public function show(Request $request, Document $document): View
@@ -30,30 +34,46 @@ class DocumentController extends Controller
         }
 
         return view('client.documents.show', [
-            'document' => $document->load(['project', 'approvals.user', 'attachments']),
-            'currentVersion' => $document->currentVersionRecord(),
+            'document' => $document->load(['project', 'approvals.user', 'versions.signedAttachments']),
+            'currentVersion' => app(DocumentWorkflowService::class)->version($document, $request->user(), $request->integer('version') ?: null),
         ]);
     }
 
     public function decide(Request $request, Document $document): RedirectResponse
     {
         $this->authorize('view', $document);
-        abort_unless($document->status === 'awaiting_approval', 422);
         $data = $request->validate([
-            'decision' => ['required', 'in:approved,changes_requested'],
+            'decision' => ['required', 'in:approved,accepted_with_minor_items,changes_requested'],
             'comment' => ['nullable', 'string', 'max:5000', 'required_if:decision,changes_requested'],
+            'version' => [$document->pack_template ? 'required' : 'nullable', 'integer', 'min:1'],
         ]);
-        $document->approvals()->create($data + [
-            'version' => $document->current_version, 'user_id' => $request->user()->id,
-            'decided_at' => now(), 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
-        ]);
-        if ($data['decision'] === 'approved') {
-            $document->currentVersionRecord()?->update(['locked_at' => now()]);
-            $document->update(['status' => 'accepted', 'accepted_at' => now()]);
-            $document->lead?->update(['status' => 'accepted']);
-        } else {
-            $document->update(['status' => 'draft']);
-        }
+        DB::transaction(function () use ($document, $data, $request) {
+            $document = Document::lockForUpdate()->findOrFail($document->id);
+            abort_unless($document->status === 'awaiting_approval', 422);
+            abort_if($document->expires_at?->isPast(), 422, 'This offer has expired. Request a revised version.');
+            abort_if(isset($data['version']) && (int) $data['version'] !== $document->current_version, 409, 'A different version is now current. Reload before deciding.');
+            $version = $document->currentVersionRecord();
+            $minorItems = $version->snapshot['minor_items'] ?? null;
+            if ($data['decision'] === 'accepted_with_minor_items') {
+                abort_unless($document->type === 'delivery_acceptance' && filled($minorItems), 422, 'Minor-item acceptance requires the provider-agreed list and dates.');
+            }
+            $comment = $data['comment'] ?? null;
+            if ($data['decision'] === 'accepted_with_minor_items') {
+                $comment = "Agreed minor items:\n".$minorItems."\nClient note: ".$comment;
+            }
+            $document->approvals()->create([
+                'decision' => $data['decision'], 'comment' => $comment,
+                'version' => $document->current_version, 'user_id' => $request->user()->id,
+                'decided_at' => now(), 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+            ]);
+            $version->update(['locked_at' => $version->locked_at ?? now(), 'published_at' => $version->published_at ?? now()]);
+            if ($data['decision'] !== 'changes_requested') {
+                $document->update(['status' => $data['decision'] === 'approved' ? 'accepted' : 'accepted_with_minor_items', 'accepted_at' => now()]);
+                $document->lead?->update(['status' => 'accepted']);
+            } else {
+                $document->update(['status' => 'changes_requested']);
+            }
+        });
         app(NotificationService::class)->send(
             User::where('role', 'owner')->get(), 'document_decision', 'action_required',
             'Client document decision', "{$document->title}: ".str($data['decision'])->replace('_', ' '), route('owner.documents.show', $document)
@@ -88,13 +108,17 @@ class DocumentController extends Controller
     public function pdf(Request $request, Document $document): Response
     {
         $this->authorize('view', $document);
-        $version = $document->currentVersionRecord();
-        abort_unless($version, 404);
-        $dompdf = new Dompdf;
-        $dompdf->loadHtml(view('pdf.document', compact('document', 'version'))->render());
-        $dompdf->setPaper('letter');
-        $dompdf->render();
+        $version = app(DocumentWorkflowService::class)->version($document, $request->user(), $request->integer('version') ?: null);
 
-        return response($dompdf->output(), 200, ['Content-Type' => 'application/pdf']);
+        return response(app(PortalPdfService::class)->document($document, $version), 200, ['Content-Type' => 'application/pdf']);
+    }
+
+    public function uploadSigned(Request $request, Document $document): RedirectResponse
+    {
+        $this->authorize('view', $document);
+        app(DocumentSignatureService::class)->upload($request, $document, false);
+        app(NotificationService::class)->send(User::where('role', 'owner')->get(), 'signature_received', 'action_required', 'Signed PDF requires review', $document->title, route('owner.documents.show', $document));
+
+        return back()->with('success', 'PDF uploaded for execution review. Uploading alone does not confirm that all required signatures are present.');
     }
 }

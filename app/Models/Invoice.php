@@ -14,7 +14,17 @@ class Invoice extends Model
             'issue_date' => 'date', 'due_date' => 'date', 'subtotal' => 'decimal:2',
             'discount' => 'decimal:2', 'total' => 'decimal:2', 'sent_at' => 'datetime',
             'viewed_at' => 'datetime', 'voided_at' => 'datetime',
+            'snapshot' => 'array', 'tax_amount' => 'decimal:2',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $invoice) {
+            if (($invoice->getOriginal('sent_at') || $invoice->getOriginal('pdf_path')) && $invoice->isDirty(['company_id', 'project_id', 'invoice_number', 'issue_date', 'due_date', 'currency', 'subtotal', 'discount', 'tax_amount', 'tax_description', 'total', 'payment_instructions', 'public_notes', 'snapshot', 'kind', 'sow_document_id', 'acceptance_document_id'])) {
+                throw new \LogicException('An issued invoice cannot be rewritten. Use a documented correction.');
+            }
+        });
     }
 
     public function company()

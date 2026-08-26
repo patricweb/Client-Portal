@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+.document-preview { font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.document-preview h1 { margin: 1.5rem 0 .75rem; font-size: 1.6rem; font-weight: 600; }
+.document-preview h2 { margin: 1.25rem 0 .5rem; font-size: 1.1rem; font-weight: 600; color: #267f7c; }
+.document-preview p { margin: .75rem 0; }
+.document-preview table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+.document-preview th, .document-preview td { border: 1px solid #d4dfe4; padding: .65rem; text-align: left; vertical-align: top; }
+.document-preview th { background: #173246; color: white; }
+.document-preview .unfilled { background: #fffbeb; color: #b45309; }
+.document-preview .page-break { margin-top: 2rem; border-top: 1px solid #d4dfe4; }
+.document-preview > div > h1:first-child { display: none; }
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 

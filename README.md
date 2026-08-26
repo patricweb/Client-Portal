@@ -66,6 +66,10 @@ Default ports can be changed in `.env`:
 
 The credentials in `.env.example` are for local development only. Replace all secrets before deployment.
 
-## Production
+## Client documents v2
+
+The portal includes guided document forms, a separate legal-provider profile, versioned signed uploads, archived PDFs, explicit acceptance, and SOW-linked advance/final billing. Start with **Provider settings**, then **Documents → New document (v2)**. See the [operator guide](docs/DOCUMENT_WORKFLOW.md) before issuing real documents. Unknown legal and bank details are deliberately left blank.
+
+## Production deployment
 
 Use [DEPLOYMENT.md](DEPLOYMENT.md) and `docker-compose.production.yml`. Production launch requires an external HTTPS reverse proxy, real SMTP/Telegram/storage credentials, strong secrets, and a verified database restore test.

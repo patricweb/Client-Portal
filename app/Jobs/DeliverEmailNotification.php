@@ -22,7 +22,11 @@ class DeliverEmailNotification implements ShouldQueue
         $delivery->increment('attempts');
         try {
             $payload = $delivery->payload;
-            Mail::raw($payload['message'], function ($mail) use ($delivery, $payload) {
+            $message = $payload['message'];
+            if (filled($payload['url'] ?? null)) {
+                $message .= "\n\nOpen in your portal (sign-in required):\n".$payload['url'];
+            }
+            Mail::raw($message, function ($mail) use ($delivery, $payload) {
                 $mail->to($delivery->recipient)->subject($payload['title']);
             });
             $delivery->update(['status' => 'sent', 'sent_at' => now(), 'failed_at' => null, 'error_message' => null]);

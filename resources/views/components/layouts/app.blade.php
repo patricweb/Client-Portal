@@ -14,6 +14,7 @@
             <span>Ikira Portal</span>
         </a>
         <nav class="flex gap-2 overflow-x-auto lg:grid">
+            @if(auth()->user()->isOwner())<a href="{{ route('owner.settings.provider.edit') }}" class="whitespace-nowrap rounded-lg px-3 py-2 text-sm {{ request()->routeIs('owner.settings.*') ? 'bg-indigo-500 text-white' : 'text-slate-300 hover:bg-slate-800' }}">Provider settings</a>@endif
             @if(auth()->user()->isStaff())
                 @foreach([
                     ['Today', 'owner.dashboard', null], ['Leads', 'owner.leads.index', 'manage_leads'], ['Clients', 'owner.companies.index', 'manage_clients'], ['Projects', 'owner.projects.index', 'manage_projects'], ['Documents', 'owner.documents.index', 'manage_documents'], ['Invoices', 'owner.invoices.index', 'manage_billing'], ['Care & Support', 'owner.care-plans.index', 'manage_care'], ['Requests', 'owner.requests.index', 'manage_requests'], ['Activity', 'owner.activity.index', 'view_activity'],

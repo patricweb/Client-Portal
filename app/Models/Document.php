@@ -24,6 +24,16 @@ class Document extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function parentDocument()
+    {
+        return $this->belongsTo(self::class, 'parent_document_id');
+    }
+
+    public function requiresSignature(): bool
+    {
+        return in_array($this->type, ['contract', 'scope_of_work', 'change_order', 'care_support_agreement'], true);
+    }
+
     public function project()
     {
         return $this->belongsTo(Project::class);
@@ -46,7 +56,7 @@ class Document extends Model
 
     public function approvals()
     {
-        return $this->morphMany(Approval::class, 'approvable')->latest('decided_at');
+        return $this->morphMany(Approval::class, 'approvable')->latest('decided_at')->latest('id');
     }
 
     public function attachments()
@@ -61,6 +71,6 @@ class Document extends Model
 
     public function isFinalized(): bool
     {
-        return in_array($this->status, ['accepted', 'signed'], true);
+        return in_array($this->status, ['accepted', 'accepted_with_minor_items', 'signed'], true);
     }
 }
