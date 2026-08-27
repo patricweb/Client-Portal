@@ -16,7 +16,7 @@ class PortalPdfService
         $pdf->loadHtml(view($view, $data)->render());
         $pdf->setPaper('letter');
         $pdf->render();
-        $pdf->getCanvas()->page_text(480, 765, 'Page {PAGE_NUM} / {PAGE_COUNT}', $pdf->getFontMetrics()->getFont('DejaVu Sans'), 8, [0.4, 0.45, 0.5]);
+        $pdf->getCanvas()->page_text(480, 765, 'Page {PAGE_NUM} / {PAGE_COUNT}', $pdf->getFontMetrics()->getFont('DejaVu Sans'), 8, [0, 0, 0]);
 
         return $pdf->output();
     }

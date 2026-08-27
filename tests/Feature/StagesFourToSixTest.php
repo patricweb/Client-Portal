@@ -51,7 +51,7 @@ class StagesFourToSixTest extends TestCase
         [, $otherClient, $otherCompany, $otherProject] = $this->actors('Other');
         $otherDocument = $this->document($otherCompany, $otherProject);
 
-        $this->actingAs($client)->post(route('client.documents.decision', $document), ['decision' => 'approved'])->assertRedirect();
+        $this->actingAs($client)->post(route('client.documents.decision', $document), ['decision' => 'approved', 'confirm_intent' => 1])->assertRedirect();
         $this->assertDatabaseHas('documents', ['id' => $document->id, 'status' => 'accepted']);
         $this->assertDatabaseHas('approvals', ['approvable_id' => $document->id, 'decision' => 'approved', 'user_id' => $client->id]);
         $this->actingAs($otherClient)->get(route('client.documents.show', $document))->assertForbidden();

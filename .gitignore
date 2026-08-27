@@ -26,4 +26,6 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /tmp/
+/output/
+/backups/
 /scripts/__pycache__/

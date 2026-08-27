@@ -11,13 +11,9 @@ use Illuminate\Support\Str;
 class DocumentPackService
 {
     public const TEMPLATES = [
-        'msa' => ['title' => 'Master Services Agreement', 'type' => 'contract', 'file' => '01_master_services_agreement.md', 'prefix' => 'MSA', 'parent' => null],
-        'proposal' => ['title' => 'Project Proposal', 'type' => 'proposal', 'file' => '02_proposal.md', 'prefix' => 'PROP', 'parent' => null],
-        'sow' => ['title' => 'Statement of Work', 'type' => 'scope_of_work', 'file' => '03_statement_of_work.md', 'prefix' => 'SOW', 'parent' => 'contract'],
-        'change_order' => ['title' => 'Change Order', 'type' => 'change_order', 'file' => '04_change_order.md', 'prefix' => 'CO', 'parent' => 'scope_of_work'],
-        'acceptance' => ['title' => 'Delivery & Acceptance Confirmation', 'type' => 'delivery_acceptance', 'file' => '07_delivery_acceptance.md', 'prefix' => 'ACC', 'parent' => 'scope_of_work'],
-        'handover' => ['title' => 'Final Handover & Rights Record', 'type' => 'project_handover', 'file' => '08_final_handover.md', 'prefix' => 'HO', 'parent' => 'scope_of_work'],
-        'care' => ['title' => 'Care & Support Agreement', 'type' => 'care_support_agreement', 'file' => '09_care_support_agreement.md', 'prefix' => 'CARE', 'parent' => 'contract'],
+        'project_confirmation' => ['title' => 'Project Confirmation', 'type' => 'project_confirmation', 'file' => '01_project_confirmation.md', 'prefix' => 'PC', 'parent' => null, 'parent_statuses' => []],
+        'change_confirmation' => ['title' => 'Change Confirmation', 'type' => 'change_confirmation', 'file' => '02_change_confirmation.md', 'prefix' => 'CC', 'parent' => 'project_confirmation', 'parent_statuses' => ['accepted']],
+        'delivery_confirmation' => ['title' => 'Delivery Confirmation', 'type' => 'delivery_confirmation', 'file' => '03_delivery_confirmation.md', 'prefix' => 'DC', 'parent' => 'project_confirmation', 'parent_statuses' => ['accepted']],
     ];
 
     public function definition(string $key): array
@@ -39,15 +35,10 @@ class DocumentPackService
         $contact = $company->contacts()->where('is_primary', true)->first();
         $definition = $this->definition($key);
         $number = $commercial['document_number'] ?? 'Assigned when the draft is created';
-        $msa = $parent?->type === 'contract' ? $parent : $parent?->parentDocument;
         $ids = [
-            'MSA-ID' => $key === 'msa' ? $number : $msa?->document_number,
-            'SOW-ID' => $key === 'sow' ? $number : ($parent?->type === 'scope_of_work' ? $parent->document_number : null),
-            'PROPOSAL-ID' => $key === 'proposal' ? $number : null,
-            'CO-ID' => $key === 'change_order' ? $number : null,
-            'ACCEPTANCE-ID' => $key === 'acceptance' ? $number : null,
-            'HANDOVER-ID' => $key === 'handover' ? $number : null,
-            'CARE-ID' => $key === 'care' ? $number : null,
+            'PROJECT CONFIRMATION ID' => $key === 'project_confirmation' ? $number : $parent?->document_number,
+            'CHANGE CONFIRMATION ID' => $key === 'change_confirmation' ? $number : null,
+            'DELIVERY CONFIRMATION ID' => $key === 'delivery_confirmation' ? $number : null,
         ];
         $defaults = [
             'CLIENT LEGAL NAME' => $company->billing_name ?: $company->name,
@@ -55,31 +46,35 @@ class DocumentPackService
             'CLIENT NOTICE EMAIL' => $company->email,
             'CLIENT NAME' => $company->billing_name ?: $company->name,
             'PROJECT NAME' => $project?->name,
+            'PROJECT DESCRIPTION' => $project?->description,
+            'INCLUDED WORK AND DELIVERABLES' => $project?->scope,
             'NAME / EMAIL' => trim(($contact?->name ?? '').' / '.($contact?->email ?? $company->email ?? ''), ' /'),
             'NAME / TITLE / EMAIL' => trim(($contact?->name ?? '').' / '.($contact?->job_title ?? '').' / '.($contact?->email ?? $company->email ?? ''), ' /'),
             'SPECIFIC PROJECT PURPOSE AND INTENDED USERS' => $project?->description,
             'EXCLUSIONS' => $project?->exclusions,
             'FEATURES, CONTENT, MIGRATION, INTEGRATIONS, DEVICES OR SERVICES NOT INCLUDED' => $project?->exclusions,
             'DATE / ESTIMATE' => $commercial['target_date'] ?? $project?->target_completion_date?->format('Y-m-d'),
+            'TARGET DATE' => $commercial['target_date'] ?? $project?->target_completion_date?->format('Y-m-d'),
             'TOTAL' => isset($commercial['price']) ? number_format((float) $commercial['price'], 2, '.', '') : null,
             'TO BE CONFIRMED' => $profile['tax_note'] ?? null,
         ];
         $automatic = [
-            'PROVIDER ADDRESS' => $profile['address'] ?? '', 'PROVIDER EMAIL' => $profile['email'] ?? '',
+            'PROVIDER LEGAL NAME' => $profile['legal_name'] ?? '', 'PROVIDER ADDRESS' => $profile['address'] ?? '', 'PROVIDER EMAIL' => $profile['email'] ?? '',
         ] + array_filter($ids, fn ($value) => filled($value));
         if (filled($commercial['target_date'] ?? null)) {
             $automatic['DATE / ESTIMATE'] = $commercial['target_date'];
             $automatic['DATE OR DAYS AFTER START'] = $commercial['target_date'];
+            $automatic['TARGET DATE'] = $commercial['target_date'];
         }
-        if (isset($commercial['price']) && in_array($key, ['sow', 'proposal'])) {
-            $automatic['AMOUNT'] = number_format((float) $commercial['price'] * ($key === 'sow' ? 0.5 : 1), 2, '.', '');
+        if (isset($commercial['price']) && $key === 'project_confirmation') {
+            $automatic['AMOUNT'] = number_format((float) $commercial['price'], 2, '.', '');
             $automatic['TOTAL'] = number_format((float) $commercial['price'], 2, '.', '');
         }
-        if ($key === 'change_order' && $parent && isset($commercial['price'])) {
+        if ($key === 'change_confirmation' && $parent && isset($commercial['price'])) {
             $previous = $commercial['previous_total'] ?? app(InvoiceService::class)->agreementTotal($parent);
-            $automatic['A'] = number_format((float) $previous, 2, '.', '');
-            $automatic['A + B'] = number_format((float) $commercial['price'], 2, '.', '');
-            $automatic['SIGNED CHANGE B'] = number_format((float) $commercial['price'] - $previous, 2, '.', '');
+            $automatic['PREVIOUS TOTAL'] = number_format((float) $previous, 2, '.', '');
+            $automatic['NEW TOTAL'] = number_format((float) $commercial['price'], 2, '.', '');
+            $automatic['PRICE DIFFERENCE'] = number_format((float) $commercial['price'] - $previous, 2, '.', '');
         }
         $sections = [];
         $fields = [];
@@ -111,8 +106,8 @@ class DocumentPackService
                 }
                 $auto = array_key_exists($token, $automatic);
                 $value = $auto ? $automatic[$token] : ($saved[$id] ?? $defaults[$token] ?? '');
-                if (! $auto && ! array_key_exists($id, $saved) && $token === 'AMOUNT' && in_array($key, ['proposal', 'sow']) && isset($commercial['price'])) {
-                    $value = number_format((float) $commercial['price'] * ($key === 'sow' ? 0.5 : 1), 2, '.', '');
+                if (! $auto && ! array_key_exists($id, $saved) && $token === 'AMOUNT' && $key === 'project_confirmation' && isset($commercial['price'])) {
+                    $value = number_format((float) $commercial['price'], 2, '.', '');
                 }
                 $fields[$id] = ['label' => Str::ucfirst(Str::lower($token)), 'token' => $token, 'section' => $section, 'context' => Str::limit($context, 220), 'automatic' => $auto, 'value' => (string) ($value ?? ''), 'max_length' => $tableCell ? 1000 : 8000, 'table_cell' => $tableCell];
                 $sections[$section][] = $id;

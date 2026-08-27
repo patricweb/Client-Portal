@@ -2,7 +2,7 @@
 @include('pdf.invoice-legacy')
 @else
 <!doctype html><html><head><meta charset="utf-8"><style>
-@page{margin:44px 44px 54px}body{font-family:DejaVu Sans,sans-serif;color:#173246;font-size:10px;line-height:1.5}header{border-bottom:2px solid #267f7c;padding-bottom:14px}h1{font-size:22px;margin:6px 0}h2{font-size:12px;color:#267f7c;margin:16px 0 5px}p{margin:5px 0}.muted{color:#61717d;font-size:9px}.draft{color:#b45309}table{border-collapse:collapse;width:100%;margin-top:16px}th{background:#173246;color:white}th,td{padding:8px;border-bottom:1px solid #d4dfe4;text-align:left;vertical-align:top}tr{page-break-inside:avoid}.right{text-align:right}.totals{width:55%;margin-left:auto}.totals td{padding:5px}.grand{font-weight:bold;font-size:13px}.instructions{white-space:pre-wrap;overflow-wrap:break-word}.footer{position:fixed;bottom:-22px;font-size:8px;color:#61717d}
+@page{margin:44px 44px 54px}body{font-family:DejaVu Sans,sans-serif;color:#000;font-size:10px;line-height:1.5}header{border-bottom:2px solid #000;padding-bottom:14px}h1{font-size:22px;margin:6px 0}h2{font-size:12px;color:#000;margin:16px 0 5px;border-bottom:1px solid #000;padding-bottom:2px}p{margin:5px 0}.muted{color:#000;font-size:9px}.draft{color:#000;font-weight:bold;border:1px solid #000;display:inline-block;padding:2px 5px}table{border-collapse:collapse;width:100%;margin-top:16px}th{background:#fff;color:#000;border-bottom:2px solid #000}th,td{padding:8px;border-bottom:1px solid #000;text-align:left;vertical-align:top}tr{page-break-inside:avoid}.right{text-align:right}.totals{width:55%;margin-left:auto}.totals td{padding:5px}.grand{font-weight:bold;font-size:13px;border-top:2px solid #000}.instructions{white-space:pre-wrap;overflow-wrap:break-word}.footer{position:fixed;bottom:-22px;font-size:8px;color:#000}
 </style></head><body>
 @php($provider = $invoice->snapshot['provider'] ?? [])
 @php($buyer = $invoice->snapshot['company'] ?? [])
@@ -10,14 +10,18 @@
 <h2>Provider / bill to</h2><p><strong>{{ $provider['legal_name'] ?? '' }}</strong><br>{{ $provider['address'] ?? '' }}<br>{{ $provider['country'] ?? '' }} | {{ $provider['email'] ?? '' }}</p>@if($provider['registration_id'] ?? null)<p>Registration / tax ID: {{ $provider['registration_id'] }}</p>@endif
 <p><strong>Client: {{ ($buyer['billing_name'] ?? null) ?: ($buyer['name'] ?? '') }}</strong><br>{{ $buyer['billing_address'] ?? '' }}<br>{{ $buyer['email'] ?? '' }}</p>
 <p>Issued: {{ $invoice->issue_date->format('F j, Y') }} | Due: {{ $invoice->due_date->format('F j, Y') }}</p>
-@if($invoice->snapshot['sow_number'] ?? null)<p>SOW: {{ $invoice->snapshot['sow_number'] }} / v{{ $invoice->snapshot['sow_version'] }} @if($invoice->snapshot['acceptance_number'] ?? null) | Acceptance: {{ $invoice->snapshot['acceptance_number'] }} / v{{ $invoice->snapshot['acceptance_version'] }} @endif</p>@endif
+@php($agreementNumber = $invoice->snapshot['agreement_number'] ?? $invoice->snapshot['sow_number'] ?? null)
+@php($agreementVersion = $invoice->snapshot['agreement_version'] ?? $invoice->snapshot['sow_version'] ?? null)
+@php($deliveryNumber = $invoice->snapshot['delivery_number'] ?? $invoice->snapshot['acceptance_number'] ?? null)
+@php($deliveryVersion = $invoice->snapshot['delivery_version'] ?? $invoice->snapshot['acceptance_version'] ?? null)
+@if($agreementNumber)<p>Project confirmation: {{ $agreementNumber }} / v{{ $agreementVersion }} @if($deliveryNumber) | Delivery confirmation: {{ $deliveryNumber }} / v{{ $deliveryVersion }} @endif</p>@endif
 <table><thead><tr><th>Description</th><th>Qty</th><th class="right">Amount ({{ $invoice->currency }})</th></tr></thead><tbody>@foreach($invoice->items as $item)<tr><td>{{ $item->description }}</td><td>{{ $item->quantity }}</td><td class="right">{{ number_format($item->total,2) }}</td></tr>@endforeach</tbody></table>
 <table class="totals"><tr><td>Subtotal</td><td class="right">{{ number_format($invoice->subtotal,2) }}</td></tr><tr><td>Discount</td><td class="right">-{{ number_format($invoice->discount,2) }}</td></tr><tr><td>Tax</td><td class="right">{{ number_format($invoice->tax_amount,2) }}</td></tr><tr class="grand"><td>Total this invoice</td><td class="right">{{ $invoice->currency }} {{ number_format($invoice->total,2) }}</td></tr></table>
 <p class="muted">Tax treatment: {{ $invoice->tax_description ?: 'Not confirmed - draft only' }}</p>
 @if($invoice->kind !== 'standard')<p>This invoice bills only the stated milestone. Earlier invoices remain separate, even if unpaid; this is not a second charge for the advance.</p>@endif
-<h2>Payment instructions</h2><p class="instructions">{{ $invoice->payment_instructions }}</p><p>Payment reference: {{ $invoice->invoice_number }}{{ isset($invoice->snapshot['sow_number']) ? ' / '.$invoice->snapshot['sow_number'] : '' }}</p>
+<h2>Payment instructions</h2><p class="instructions">{{ $invoice->payment_instructions }}</p><p>Payment reference: {{ $invoice->invoice_number }}{{ $agreementNumber ? ' / '.$agreementNumber : '' }}</p>
 @if($invoice->public_notes)<h2>Notes</h2><p class="instructions">{{ $invoice->public_notes }}</p>@endif
-<p class="muted">Commercial payment request, not a receipt, an acceptance record or an assertion of VAT registration. Mandatory fiscal documents remain subject to applicable requirements. Confirm changed bank instructions through a previously trusted channel. Current payment status is available in the portal; this issued PDF is not rewritten when payments arrive.</p>
+<p class="muted">Payment request, not a receipt or delivery confirmation. Confirm changed bank instructions through a previously trusted channel. Current payment status is available in the portal; this issued PDF is not rewritten when payments arrive.</p>
 <div class="footer">{{ $provider['legal_name'] ?? '' }} | {{ $invoice->invoice_number }} | Issued invoice record</div>
 </body></html>
 @endif

@@ -30,7 +30,8 @@ class InvoiceController extends Controller
 
     public function create(Request $request, InvoiceService $service): View
     {
-        $selectedSow = Document::where('type', 'scope_of_work')->where('status', 'signed')->find($request->input('sow_document_id'));
+        $selectedSow = Document::where(fn ($query) => $query->where(fn ($legacy) => $legacy->where('type', 'scope_of_work')->where('status', 'signed'))
+            ->orWhere(fn ($current) => $current->where('type', 'project_confirmation')->where('status', 'accepted')))->find($request->input('sow_document_id'));
         $kind = in_array($request->input('kind'), ['advance', 'final']) ? $request->input('kind') : 'standard';
         $previouslyInvoiced = $selectedSow ? (float) Invoice::where('sow_document_id', $selectedSow->id)->where('status', '!=', 'void')->sum('total') : 0;
         $suggestedAmount = $selectedSow ? ($kind === 'advance' ? $service->agreementTotal($selectedSow) / 2 : max(0, $service->agreementTotal($selectedSow) - $previouslyInvoiced)) : null;
@@ -38,8 +39,9 @@ class InvoiceController extends Controller
         return view('owner.invoices.create', [
             'companies' => Company::orderBy('name')->get(),
             'projects' => Project::with('company')->orderBy('name')->get(),
-            'sows' => Document::with('company')->where('type', 'scope_of_work')->where('status', 'signed')->get(),
-            'acceptances' => Document::where('type', 'delivery_acceptance')->whereIn('status', ['accepted', 'accepted_with_minor_items'])->get(),
+            'sows' => Document::with('company')->where(fn ($query) => $query->where(fn ($legacy) => $legacy->where('type', 'scope_of_work')->where('status', 'signed'))
+                ->orWhere(fn ($current) => $current->where('type', 'project_confirmation')->where('status', 'accepted')))->get(),
+            'acceptances' => Document::whereIn('type', ['delivery_confirmation', 'delivery_acceptance'])->whereIn('status', ['accepted', 'accepted_with_minor_items'])->get(),
             'profile' => ProviderProfile::current(), 'selectedSow' => $selectedSow, 'kind' => $kind, 'suggestedAmount' => $suggestedAmount,
         ]);
     }
@@ -63,17 +65,19 @@ class InvoiceController extends Controller
         abort_if($project && $project->company_id !== (int) $data['company_id'], 422, 'Project does not belong to company.');
         $sow = isset($data['sow_document_id']) ? Document::findOrFail($data['sow_document_id']) : null;
         if ($sow) {
-            abort_unless($sow->type === 'scope_of_work' && $sow->company_id === (int) $data['company_id'] && $sow->project_id === $project?->id, 422, 'SOW does not match this client / project.');
+            abort_unless(in_array($sow->type, ['project_confirmation', 'scope_of_work'], true) && in_array($sow->status, ['accepted', 'signed'], true) && $sow->company_id === (int) $data['company_id'] && $sow->project_id === $project?->id, 422, 'Project Confirmation does not match this client / project.');
         }
         $acceptance = isset($data['acceptance_document_id']) ? Document::findOrFail($data['acceptance_document_id']) : null;
-        abort_if($acceptance && ($acceptance->type !== 'delivery_acceptance' || $acceptance->parent_document_id !== $sow?->id), 422, 'Acceptance must refer to the selected SOW.');
+        abort_if($acceptance && (! in_array($acceptance->type, ['delivery_confirmation', 'delivery_acceptance'], true) || $acceptance->parent_document_id !== $sow?->id), 422, 'Delivery Confirmation must refer to the selected Project Confirmation.');
         if ($sow) {
             $data['snapshot'] = [
                 'provider' => ProviderProfile::current()->details,
                 'company' => Company::findOrFail($data['company_id'])->only(['id', 'name', 'billing_name', 'billing_address', 'email']),
                 'sow_number' => $sow->document_number, 'sow_version' => $sow->current_version,
+                'agreement_number' => $sow->document_number, 'agreement_version' => $sow->current_version,
                 'project_total' => $service->agreementTotal($sow), 'acceptance_number' => $acceptance?->document_number,
                 'acceptance_version' => $acceptance?->current_version,
+                'delivery_number' => $acceptance?->document_number, 'delivery_version' => $acceptance?->current_version,
             ];
         }
         $items = $data['items'];

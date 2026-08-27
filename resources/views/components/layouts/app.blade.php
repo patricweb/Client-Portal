@@ -17,7 +17,7 @@
             @if(auth()->user()->isOwner())<a href="{{ route('owner.settings.provider.edit') }}" class="whitespace-nowrap rounded-lg px-3 py-2 text-sm {{ request()->routeIs('owner.settings.*') ? 'bg-indigo-500 text-white' : 'text-slate-300 hover:bg-slate-800' }}">Provider settings</a>@endif
             @if(auth()->user()->isStaff())
                 @foreach([
-                    ['Today', 'owner.dashboard', null], ['Leads', 'owner.leads.index', 'manage_leads'], ['Clients', 'owner.companies.index', 'manage_clients'], ['Projects', 'owner.projects.index', 'manage_projects'], ['Documents', 'owner.documents.index', 'manage_documents'], ['Invoices', 'owner.invoices.index', 'manage_billing'], ['Care & Support', 'owner.care-plans.index', 'manage_care'], ['Requests', 'owner.requests.index', 'manage_requests'], ['Activity', 'owner.activity.index', 'view_activity'],
+                    ['Today', 'owner.dashboard', null], ['Leads', 'owner.leads.index', 'manage_leads'], ['Clients', 'owner.companies.index', 'manage_clients'], ['Projects', 'owner.projects.index', 'manage_projects'], ['Confirmations', 'owner.documents.index', 'manage_documents'], ['Invoices', 'owner.invoices.index', 'manage_billing'], ['Care & Support', 'owner.care-plans.index', 'manage_care'], ['Requests', 'owner.requests.index', 'manage_requests'], ['Activity', 'owner.activity.index', 'view_activity'],
                 ] as [$label, $route, $permission])
                     @continue($permission && ! auth()->user()->hasPermission($permission))
                     <a href="{{ route($route) }}" class="whitespace-nowrap rounded-lg px-3 py-2 text-sm {{ request()->routeIs($route, str_replace('.index', '.*', $route)) ? 'bg-indigo-500 text-white' : 'text-slate-300 hover:bg-slate-800' }}">{{ $label }}</a>
@@ -26,7 +26,7 @@
             @else
                 <a href="{{ route('client.dashboard') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.dashboard') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Home</a>
                 <a href="{{ route('client.projects.index') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.projects.*', 'client.brief.*') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Projects</a>
-                <a href="{{ route('client.documents.index') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.documents.*') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Documents</a>
+                <a href="{{ route('client.documents.index') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.documents.*') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Confirmations</a>
                 <a href="{{ route('client.billing.index') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.billing.*') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Billing</a>
                 <a href="{{ route('client.care-plans.index') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.care-plans.*') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Care & Support</a>
                 <a href="{{ route('client.requests.index') }}" class="rounded-lg px-3 py-2 text-sm {{ request()->routeIs('client.requests.*') ? 'bg-indigo-500 text-white' : 'text-slate-300' }}">Requests</a>

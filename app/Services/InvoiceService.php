@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Approval;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentVersion;
@@ -49,11 +50,16 @@ class InvoiceService
         });
     }
 
-    public function agreementTotal(Document $sow): float
+    public function agreementTotal(Document $agreement): float
     {
-        $change = DocumentVersion::whereNotNull('signed_at')->whereHas('document', fn ($query) => $query->where('parent_document_id', $sow->id)->where('pack_template', 'change_order'))->latest('signed_at')->latest('id')->first();
+        $confirmationIds = Document::where('parent_document_id', $agreement->id)->where('pack_template', 'change_confirmation')->pluck('id');
+        $confirmationDecision = Approval::where('approvable_type', Document::class)->whereIn('approvable_id', $confirmationIds)
+            ->where('decision', 'approved')->latest('decided_at')->latest('id')->first();
+        $confirmationChange = $confirmationDecision ? DocumentVersion::where('document_id', $confirmationDecision->approvable_id)->where('version', $confirmationDecision->version)->first() : null;
+        $legacyChange = DocumentVersion::whereNotNull('signed_at')->whereHas('document', fn ($query) => $query->where('parent_document_id', $agreement->id)->where('pack_template', 'change_order'))->latest('signed_at')->latest('id')->first();
+        $change = $confirmationChange ?: $legacyChange;
 
-        return (float) ($change?->snapshot['commercial']['price'] ?? $sow->currentVersionRecord()?->snapshot['commercial']['price'] ?? $sow->project?->price ?? 0);
+        return (float) ($change?->snapshot['commercial']['price'] ?? $agreement->currentVersionRecord()?->snapshot['commercial']['price'] ?? $agreement->project?->price ?? 0);
     }
 
     public function assertReady(Invoice $invoice): void
@@ -73,28 +79,31 @@ class InvoiceService
         if (! in_array($invoice->kind, ['advance', 'final'])) {
             return;
         }
-        $sow = Document::lockForUpdate()->find($invoice->sow_document_id);
-        if (! $sow || $sow->type !== 'scope_of_work' || $sow->company_id !== $invoice->company_id || $sow->project_id !== $invoice->project_id || $sow->status !== 'signed') {
-            throw ValidationException::withMessages(['sow_document_id' => 'A signed SOW for this client and project is required.']);
+        $agreement = Document::lockForUpdate()->find($invoice->sow_document_id);
+        $validAgreement = $agreement && (($agreement->type === 'project_confirmation' && $agreement->status === 'accepted') || ($agreement->type === 'scope_of_work' && $agreement->status === 'signed'));
+        if (! $validAgreement || $agreement->company_id !== $invoice->company_id || $agreement->project_id !== $invoice->project_id) {
+            throw ValidationException::withMessages(['sow_document_id' => 'An accepted Project Confirmation for this client and project is required.']);
         }
-        if (($invoice->snapshot['sow_version'] ?? null) !== $sow->current_version) {
-            throw ValidationException::withMessages(['sow_document_id' => 'The SOW version changed. Recreate this unissued draft from the current signed SOW.']);
+        $snapshotAgreementVersion = $invoice->snapshot['agreement_version'] ?? $invoice->snapshot['sow_version'] ?? null;
+        if ($snapshotAgreementVersion !== $agreement->current_version) {
+            throw ValidationException::withMessages(['sow_document_id' => 'The Project Confirmation version changed. Recreate this unissued draft from the current accepted version.']);
         }
-        if ($invoice->currency !== ($sow->currentVersionRecord()?->snapshot['commercial']['currency'] ?? $sow->project?->currency)) {
-            throw ValidationException::withMessages(['currency' => 'Invoice currency must match the signed SOW.']);
+        if ($invoice->currency !== ($agreement->currentVersionRecord()?->snapshot['commercial']['currency'] ?? $agreement->project?->currency)) {
+            throw ValidationException::withMessages(['currency' => 'Invoice currency must match the Project Confirmation.']);
         }
         if ($invoice->kind === 'final') {
             $acceptance = Document::find($invoice->acceptance_document_id);
-            if (! $acceptance || $acceptance->type !== 'delivery_acceptance' || $acceptance->company_id !== $invoice->company_id || $acceptance->parent_document_id !== $sow->id || ! in_array($acceptance->status, ['accepted', 'accepted_with_minor_items']) || ($acceptance->currentVersionRecord()?->snapshot['parent_version'] ?? null) !== $sow->current_version || ($invoice->snapshot['acceptance_version'] ?? null) !== $acceptance->current_version) {
-                throw ValidationException::withMessages(['acceptance_document_id' => 'Final billing requires explicit acceptance of this SOW version, not a payment or silence.']);
+            $deliveryVersion = $invoice->snapshot['delivery_version'] ?? $invoice->snapshot['acceptance_version'] ?? null;
+            if (! $acceptance || ! in_array($acceptance->type, ['delivery_confirmation', 'delivery_acceptance'], true) || $acceptance->company_id !== $invoice->company_id || $acceptance->parent_document_id !== $agreement->id || ! in_array($acceptance->status, ['accepted', 'accepted_with_minor_items']) || ($acceptance->currentVersionRecord()?->snapshot['parent_version'] ?? null) !== $agreement->current_version || $deliveryVersion !== $acceptance->current_version) {
+                throw ValidationException::withMessages(['acceptance_document_id' => 'Final billing requires explicit confirmation of delivery for this Project Confirmation version.']);
             }
         }
-        $alreadyInvoiced = (float) Invoice::where('sow_document_id', $sow->id)->whereNotIn('status', ['draft', 'void'])->whereKeyNot($invoice->id)->sum('total');
-        if (round((float) ($invoice->snapshot['project_total'] ?? 0), 2) !== round($this->agreementTotal($sow), 2)) {
-            throw ValidationException::withMessages(['total' => 'The agreed total changed. Recreate this unissued draft from the current signed agreements.']);
+        $alreadyInvoiced = (float) Invoice::where('sow_document_id', $agreement->id)->whereNotIn('status', ['draft', 'void'])->whereKeyNot($invoice->id)->sum('total');
+        if (round((float) ($invoice->snapshot['project_total'] ?? 0), 2) !== round($this->agreementTotal($agreement), 2)) {
+            throw ValidationException::withMessages(['total' => 'The confirmed total changed. Recreate this unissued draft from the current confirmation.']);
         }
-        if (round($alreadyInvoiced + (float) $invoice->total, 2) > round($this->agreementTotal($sow), 2)) {
-            throw ValidationException::withMessages(['total' => 'This would exceed the signed project total. Prior invoices count even when unpaid; do not rebill the advance.']);
+        if (round($alreadyInvoiced + (float) $invoice->total, 2) > round($this->agreementTotal($agreement), 2)) {
+            throw ValidationException::withMessages(['total' => 'This would exceed the confirmed project total. Prior invoices count even when unpaid; do not rebill the advance.']);
         }
     }
 }

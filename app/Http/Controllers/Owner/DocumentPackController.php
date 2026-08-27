@@ -32,7 +32,7 @@ class DocumentPackController extends Controller
     private function form(Request $request, DocumentPackService $pack, ?Document $document = null)
     {
         $snapshot = $document?->currentVersionRecord()?->snapshot ?? [];
-        $key = $request->input('template', $document?->pack_template ?? 'proposal');
+        $key = $request->input('template', $document?->pack_template ?? 'project_confirmation');
         $definition = $pack->definition($key);
         if ($document && isset($snapshot['source_hash'])) {
             abort_unless(hash_equals($snapshot['source_hash'], hash('sha256', $pack->source($key))), 409, 'The template source changed. Create a fresh document and review its fields; old field positions will not be reused.');
@@ -53,8 +53,8 @@ class DocumentPackController extends Controller
             'templates' => DocumentPackService::TEMPLATES,
             'companies' => Company::orderBy('name')->get(),
             'projects' => $company ? $company->projects()->orderBy('name')->get() : collect(),
-            'parents' => $company && $definition['parent'] ? Document::where('company_id', $company->id)->where('type', $definition['parent'])->where('status', 'signed')
-                ->when($definition['parent'] === 'scope_of_work', fn ($query) => $query->where('project_id', $project?->id))->get() : collect(),
+            'parents' => $company && $definition['parent'] ? Document::where('company_id', $company->id)->where('type', $definition['parent'])
+                ->whereIn('status', $definition['parent_statuses'])->where('project_id', $project?->id)->get() : collect(),
             'profile' => ProviderProfile::current(),
         ]);
     }
@@ -77,7 +77,7 @@ class DocumentPackController extends Controller
             'template' => ['required', Rule::in(array_keys(DocumentPackService::TEMPLATES))],
             'company_id' => ['required', 'exists:companies,id'], 'project_id' => ['nullable', 'exists:projects,id'],
             'parent_document_id' => ['nullable', 'exists:documents,id'], 'title' => ['required', 'string', 'max:255'],
-            'price' => ['nullable', 'required_if:template,sow,change_order,proposal', 'numeric', 'min:0', 'max:999999999'], 'target_date' => ['nullable', 'date'],
+            'price' => ['nullable', 'required_if:template,project_confirmation,change_confirmation', 'numeric', 'min:0', 'max:999999999'], 'target_date' => ['nullable', 'date'],
             'fields' => ['nullable', 'array', 'max:300'], 'fields.*' => ['nullable', 'string', 'max:8000'],
             'base_version' => ['nullable', 'integer', 'min:1'], 'source_hash' => ['required', 'string', 'size:64'],
             'minor_items' => ['nullable', 'string', 'max:5000'],
@@ -88,7 +88,7 @@ class DocumentPackController extends Controller
         $project = isset($data['project_id']) ? Project::findOrFail($data['project_id']) : null;
         abort_if($project && $project->company_id !== $company->id, 422, 'Project does not belong to this client.');
         abort_if($project && $project->currency !== 'USD', 422, 'This document pack uses USD. Use a reviewed custom template for another currency.');
-        abort_if(! $project && ! in_array($data['template'], ['msa', 'proposal']), 422, 'Select a project for this document.');
+        abort_unless($project, 422, 'Select a project for this confirmation.');
         $parent = isset($data['parent_document_id']) ? Document::findOrFail($data['parent_document_id']) : null;
         if ($parent) {
             $this->validateParent($parent, $company, $project, $definition);
@@ -107,7 +107,7 @@ class DocumentPackController extends Controller
                 $next = 1;
             }
             $commercial = ['price' => $data['price'] ?? null, 'currency' => 'USD', 'target_date' => $data['target_date'] ?? null, 'document_number' => $document->document_number];
-            if ($data['template'] === 'change_order' && $parent) {
+            if ($data['template'] === 'change_confirmation' && $parent) {
                 $commercial['previous_total'] = app(InvoiceService::class)->agreementTotal($parent);
             }
             $prepared = $pack->prepare($data['template'], $company, $project, $parent, $commercial, $data['fields'] ?? []);
@@ -121,7 +121,7 @@ class DocumentPackController extends Controller
                 'pack_template' => $data['template'], 'source_hash' => $prepared['source_hash'],
                 'commercial' => $commercial, 'fields' => collect($prepared['fields'])->reject(fn ($field) => $field['automatic'])->map(fn ($field) => $field['value'])->all(),
                 'missing_fields' => $prepared['missing'], 'parent_id' => $parent?->id, 'parent_version' => $parent?->current_version,
-                'minor_items' => $data['template'] === 'acceptance' ? ($data['minor_items'] ?? null) : null,
+                'minor_items' => $data['template'] === 'delivery_confirmation' ? ($data['minor_items'] ?? null) : null,
             ];
             if (filled($snapshot['minor_items'])) {
                 $prepared['html'] .= '<h2>Provider minor-item commitments for portal acceptance</h2><p>'.nl2br(e($snapshot['minor_items'])).'</p><p>This list is offered by the provider for this version. It becomes the agreed minor-item list only when the client explicitly selects acceptance with these minor items in the portal.</p>';
@@ -137,7 +137,7 @@ class DocumentPackController extends Controller
 
     private function validateParent(Document $parent, ?Company $company, ?Project $project, array $definition): void
     {
-        abort_unless($company && $parent->company_id === $company->id && $parent->type === $definition['parent'], 422, 'The parent agreement must match this client and document type.');
-        abort_if($parent->type === 'scope_of_work' && $parent->project_id !== $project?->id, 422, 'Select the SOW for this project.');
+        abort_unless($company && $parent->company_id === $company->id && $parent->type === $definition['parent'], 422, 'The related confirmation must match this client and document type.');
+        abort_unless($parent->project_id === $project?->id && in_array($parent->status, $definition['parent_statuses'], true), 422, 'Select the accepted Project Confirmation for this project.');
     }
 }

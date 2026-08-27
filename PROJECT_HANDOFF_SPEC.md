@@ -2,6 +2,8 @@
 
 ## 1. Назначение документа
 
+> Актуальное упрощение от 2026-08-28: обычный workflow больше не создаёт отдельные Proposal, MSA, SOW, Change Order, Acceptance, Handover и Care Agreement. Для новых проектов используются Project Confirmation, опциональный Change Confirmation, Delivery Confirmation и отдельные Invoices. Клиент подтверждает точную PDF-версию в портале; legacy-документы сохраняются только для истории и совместимости. Операционная инструкция: `docs/DOCUMENT_WORKFLOW.md`.
+
 Этот документ предназначен для разработчика, который продолжит работу над проектом **Ikira Client Portal** без доступа к предыдущей переписке.
 
 В документе зафиксированы:
@@ -1170,7 +1172,7 @@ client
 - error monitoring;
 - empty states;
 - user-friendly error pages;
-- legal template review;
+- owner review of business details and confirmation wording;
 - accessibility review.
 
 ---
@@ -1278,8 +1280,8 @@ We are currently working on Development.
 
 Текущий набор:
 
-- 25 tests;
-- 86 assertions;
+- 38 tests;
+- 215 assertions;
 - Owner login;
 - password reset request;
 - temporary password enforcement;
@@ -1349,7 +1351,7 @@ Lead created
 
 ## 17. Дальнейшее развитие после MVP
 
-Базовые этапы 1–11 завершены. Перед реальным production launch выполнить внешний deployment checklist из `DEPLOYMENT.md`: подключить домен/TLS, реальные SMTP/Telegram/S3 credentials, провести legal review шаблонов и сделать пробное восстановление backup.
+Базовые этапы 1–11 завершены. Перед реальным production launch выполнить внешний deployment checklist из `DEPLOYMENT.md`: подключить домен/TLS, реальные SMTP/Telegram/S3 credentials, проверить собственные реквизиты и сделать пробное восстановление backup в отдельной тестовой среде.
 
 После запуска можно планировать online payments, electronic signature и automatic monitoring как отдельные интеграции.
 

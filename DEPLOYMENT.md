@@ -1,6 +1,6 @@
 # Production deployment
 
-This runbook covers the containerized Ikira Client Portal. The application stack is production-ready, but domain ownership, TLS, provider accounts, credentials, and legal approval must be supplied outside this repository.
+This runbook covers the containerized Ikira Client Portal. The application stack is production-ready, but domain ownership, TLS, provider accounts, credentials, and the owner's final business details must be supplied outside this repository.
 
 ## 1. Prepare secrets
 
@@ -29,18 +29,18 @@ Put the app behind a trusted HTTPS reverse proxy/load balancer and forward reque
 
 ## 3. Backups
 
-From Windows PowerShell in the repository:
+From Windows PowerShell in the repository, create and restore a full archive containing MySQL and all private files:
 
 ```powershell
 .\docker\backup.ps1
-.\docker\restore.ps1 -BackupFile .\backups\ikira-YYYYMMDD-HHMMSS.sql -ConfirmRestore
+.\docker\restore.ps1 -BackupFile .\backups\ikira-full-YYYYMMDD-HHMMSS.zip -ConfirmRestore
 ```
 
-Store encrypted copies outside the server. Schedule backups according to the business recovery objective and perform a restore drill before launch and periodically afterward. Restoring replaces the target database and must be tested in a non-production environment first.
+Store encrypted copies outside the server. Schedule backups according to the business recovery objective and perform a restore drill before launch and periodically afterward. Restoring replaces the target database and private storage and must be tested in a non-production environment first.
 
 ## 4. Release procedure
 
-1. Back up the database and persistent uploads.
+1. Create a full backup of the database and persistent uploads.
 2. Build the exact Git revision and run the complete test suite.
 3. Put the portal in maintenance mode for migrations that require it.
 4. Run migrations once, restart app/queue/scheduler, and run smoke tests.

@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DocumentController extends Controller
 {
-    private const TYPES = ['proposal', 'scope_of_work', 'contract', 'invoice', 'change_order', 'delivery_acceptance', 'project_handover', 'care_support_agreement', 'other'];
+    private const TYPES = ['project_confirmation', 'change_confirmation', 'delivery_confirmation', 'proposal', 'scope_of_work', 'contract', 'invoice', 'change_order', 'delivery_acceptance', 'project_handover', 'care_support_agreement', 'other'];
 
     public function index(): View
     {
@@ -121,7 +121,7 @@ class DocumentController extends Controller
             abort_if($document->status !== 'draft', 422, 'Only a draft can be sent.');
             abort_if($document->expires_at?->isPast(), 422, 'The document has expired. Create a revised version.');
             app(DocumentWorkflowService::class)->assertReady($document);
-            $status = $document->requiresSignature() ? 'awaiting_signature' : (in_array($document->type, ['proposal', 'delivery_acceptance', 'project_handover']) ? 'awaiting_approval' : 'sent');
+            $status = $document->requiresSignature() ? 'awaiting_signature' : (in_array($document->type, ['project_confirmation', 'change_confirmation', 'delivery_confirmation', 'proposal', 'delivery_acceptance', 'project_handover']) ? 'awaiting_approval' : 'sent');
             $version = $document->currentVersionRecord();
             $version->update(['locked_at' => now(), 'published_at' => now()]);
             app(PortalPdfService::class)->document($document, $version, true);

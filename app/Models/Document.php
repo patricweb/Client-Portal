@@ -31,7 +31,14 @@ class Document extends Model
 
     public function requiresSignature(): bool
     {
+        // Legacy document types keep their signed-PDF workflow. New confirmations use an
+        // explicit portal decision tied to an immutable PDF version instead.
         return in_array($this->type, ['contract', 'scope_of_work', 'change_order', 'care_support_agreement'], true);
+    }
+
+    public function usesPortalConfirmation(): bool
+    {
+        return in_array($this->type, ['project_confirmation', 'change_confirmation', 'delivery_confirmation'], true);
     }
 
     public function project()

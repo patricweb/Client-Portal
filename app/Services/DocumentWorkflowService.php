@@ -27,8 +27,10 @@ class DocumentWorkflowService
             if ($definition['parent']) {
                 $parent = $document->parentDocument;
                 $parentVersion = $parent?->versions()->where('version', $snapshot['parent_version'] ?? 0)->first();
-                if (! $parent || $parent->id !== ($snapshot['parent_id'] ?? null) || $parent->company_id !== $document->company_id || $parent->type !== $definition['parent'] || ! $parentVersion?->signed_at) {
-                    throw ValidationException::withMessages(['parent_document_id' => 'Link a signed parent agreement and save a revised draft before sending.']);
+                $validParentStatus = in_array($parent?->status, $definition['parent_statuses'] ?? ['signed'], true);
+                $parentFinalized = $parentVersion && ($parentVersion->signed_at || $parentVersion->locked_at);
+                if (! $parent || $parent->id !== ($snapshot['parent_id'] ?? null) || $parent->company_id !== $document->company_id || $parent->project_id !== $document->project_id || $parent->type !== $definition['parent'] || ! $validParentStatus || ! $parentFinalized) {
+                    throw ValidationException::withMessages(['parent_document_id' => 'Link the accepted Project Confirmation and save a revised draft before sending.']);
                 }
             }
         }

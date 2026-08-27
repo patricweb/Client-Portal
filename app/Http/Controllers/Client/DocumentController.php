@@ -46,6 +46,7 @@ class DocumentController extends Controller
             'decision' => ['required', 'in:approved,accepted_with_minor_items,changes_requested'],
             'comment' => ['nullable', 'string', 'max:5000', 'required_if:decision,changes_requested'],
             'version' => [$document->pack_template ? 'required' : 'nullable', 'integer', 'min:1'],
+            'confirm_intent' => ['nullable', 'required_unless:decision,changes_requested', 'accepted'],
         ]);
         DB::transaction(function () use ($document, $data, $request) {
             $document = Document::lockForUpdate()->findOrFail($document->id);
@@ -55,7 +56,7 @@ class DocumentController extends Controller
             $version = $document->currentVersionRecord();
             $minorItems = $version->snapshot['minor_items'] ?? null;
             if ($data['decision'] === 'accepted_with_minor_items') {
-                abort_unless($document->type === 'delivery_acceptance' && filled($minorItems), 422, 'Minor-item acceptance requires the provider-agreed list and dates.');
+                abort_unless(in_array($document->type, ['delivery_confirmation', 'delivery_acceptance'], true) && filled($minorItems), 422, 'Minor-item acceptance requires the provider-agreed list and dates.');
             }
             $comment = $data['comment'] ?? null;
             if ($data['decision'] === 'accepted_with_minor_items') {

@@ -49,6 +49,16 @@ docker compose logs -f app queue scheduler
 ./docker/backup.ps1
 ```
 
+After every `git pull`, synchronize dependencies before migrations:
+
+```bash
+docker compose exec app composer install --no-interaction --prefer-dist
+docker compose exec app npm install --ignore-scripts
+docker compose exec app php artisan migrate --force
+docker compose exec app npm run build
+docker compose restart queue scheduler
+```
+
 ## Services
 
 - `app`: Apache, PHP, Composer, Node.js, and Laravel
@@ -66,9 +76,9 @@ Default ports can be changed in `.env`:
 
 The credentials in `.env.example` are for local development only. Replace all secrets before deployment.
 
-## Client documents v2
+## Simple client confirmations
 
-The portal includes guided document forms, a separate legal-provider profile, versioned signed uploads, archived PDFs, explicit acceptance, and SOW-linked advance/final billing. Start with **Provider settings**, then **Documents → New document (v2)**. See the [operator guide](docs/DOCUMENT_WORKFLOW.md) before issuing real documents. Unknown legal and bank details are deliberately left blank.
+The portal uses three short records: **Project Confirmation**, an optional **Change Confirmation**, and **Delivery Confirmation**. Each client decision is tied to an immutable PDF version and audit metadata. Invoices remain separate. Start with **Provider settings**, then **Confirmations → New confirmation**. See the [operator guide](docs/DOCUMENT_WORKFLOW.md) before issuing real records.
 
 ## Production deployment
 
