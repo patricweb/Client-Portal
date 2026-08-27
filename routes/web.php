@@ -13,6 +13,7 @@ use App\Http\Controllers\Client\DashboardController as ClientDashboardController
 use App\Http\Controllers\Client\DocumentController as ClientDocumentController;
 use App\Http\Controllers\Client\ProjectController as ClientProjectController;
 use App\Http\Controllers\Client\SupportRequestController as ClientSupportRequestController;
+use App\Http\Controllers\Integrations\TelegramWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Owner\CarePlanController;
 use App\Http\Controllers\Owner\CompanyController;
@@ -27,9 +28,14 @@ use App\Http\Controllers\Owner\ProjectController as OwnerProjectController;
 use App\Http\Controllers\Owner\ProviderProfileController;
 use App\Http\Controllers\Owner\SupportRequestController as OwnerSupportRequestController;
 use App\Http\Controllers\Owner\TeamController;
+use App\Http\Controllers\Owner\WorkItemController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
+
+Route::post('/integrations/telegram/webhook', TelegramWebhookController::class)
+    ->middleware('throttle:integrations')
+    ->name('integrations.telegram.webhook');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -86,6 +92,10 @@ Route::prefix('owner')->name('owner.')->middleware(['auth', 'password.changed', 
     Route::post('requests/{supportRequest}/messages', [OwnerSupportRequestController::class, 'message'])->middleware('permission:manage_requests')->name('requests.messages.store');
     Route::post('requests/{supportRequest}/external', [OwnerSupportRequestController::class, 'external'])->middleware('permission:manage_requests')->name('requests.external.store');
     Route::post('requests/{supportRequest}/change-order', [OwnerSupportRequestController::class, 'changeOrder'])->middleware('permission:manage_requests')->name('requests.change-order');
+    Route::resource('work-items', WorkItemController::class)->only(['index', 'create', 'store', 'edit', 'update'])->middleware('permission:manage_work_items');
+    Route::patch('work-items/{workItem}/status', [WorkItemController::class, 'updateStatus'])->middleware('permission:manage_work_items')->name('work-items.status');
+    Route::post('work-items/{workItem}/sync', [WorkItemController::class, 'sync'])->middleware('permission:manage_work_items')->name('work-items.sync');
+    Route::post('work-items/{workItem}/archive', [WorkItemController::class, 'archive'])->middleware('permission:manage_work_items')->name('work-items.archive');
     Route::get('activity', [ActivityController::class, 'owner'])->middleware('permission:view_activity')->name('activity.index');
     Route::get('team', [TeamController::class, 'index'])->middleware('permission:manage_team')->name('team.index');
     Route::post('team', [TeamController::class, 'store'])->middleware('permission:manage_team')->name('team.store');

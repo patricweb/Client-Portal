@@ -1,10 +1,11 @@
 <x-layouts.app title="Today — Ikira Client Portal">
     <div class="mb-7 flex items-start justify-between gap-4"><div><h1 class="text-3xl font-semibold">Today</h1><p class="mt-1 text-slate-500">Work that needs your attention now.</p></div><a href="{{ route('owner.projects.create') }}" class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white">Create project</a></div>
-    <div class="grid gap-4 sm:grid-cols-3">
-        @foreach([['Active leads', $leadCount], ['Client companies', $clientCount], ['Active projects', $activeProjectCount]] as [$label, $value])
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        @foreach([['Active leads', $leadCount], ['Client companies', $clientCount], ['Active projects', $activeProjectCount], ['Open work items', $openWorkItemCount]] as [$label, $value])
             <section class="rounded-2xl border border-slate-200 bg-white p-5"><p class="text-sm text-slate-500">{{ $label }}</p><p class="mt-2 text-3xl font-semibold">{{ $value }}</p></section>
         @endforeach
     </div>
+    @if(auth()->user()->hasPermission('manage_work_items'))<section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5"><div class="flex items-center justify-between gap-3"><h2 class="font-semibold">Internal work queue</h2><a href="{{ route('owner.work-items.index') }}" class="text-sm text-indigo-600">View all</a></div><div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">@forelse($dueWorkItems as $workItem)<a href="{{ route('owner.work-items.edit', $workItem) }}" class="rounded-xl border border-slate-100 p-4"><div class="flex items-center justify-between gap-2"><p class="font-medium">{{ $workItem->title }}</p><span class="text-xs text-slate-500">{{ \App\Models\WorkItem::STATUSES[$workItem->status] }}</span></div><p class="mt-2 text-sm text-slate-500">{{ $workItem->project?->name ?? 'Internal' }} · {{ $workItem->assignee?->name ?? 'Unassigned' }}</p><p class="mt-2 text-xs {{ $workItem->due_date?->isPast() ? 'text-red-600' : 'text-slate-400' }}">Due {{ $workItem->due_date?->format('M j, Y') ?? 'not set' }}</p></a>@empty<p class="text-sm text-slate-500">No open internal work items.</p>@endforelse</div></section>@endif
     <div class="mt-6 grid gap-6 xl:grid-cols-2">
         <section class="rounded-2xl border border-slate-200 bg-white p-5"><h2 class="font-semibold">Waiting for client approval</h2><div class="mt-4 divide-y divide-slate-100">
             @forelse($waitingStages as $stage)<a href="{{ route('owner.projects.show', $stage->project) }}" class="flex items-center justify-between gap-3 py-3"><div><p class="font-medium">{{ $stage->title }}</p><p class="text-sm text-slate-500">{{ $stage->project->company->name }} · {{ $stage->project->name }}</p></div><span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-700">Waiting</span></a>@empty<p class="py-4 text-sm text-slate-500">Nothing is waiting for approval.</p>@endforelse
@@ -14,4 +15,3 @@
         </div></section>
     </div>
 </x-layouts.app>
-

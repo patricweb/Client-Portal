@@ -12,6 +12,7 @@ use App\Models\ProjectBrief;
 use App\Models\ProjectStage;
 use App\Models\RequestMessage;
 use App\Models\SupportRequest;
+use App\Models\WorkItem;
 use App\Observers\ActivityObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -34,7 +35,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
-        foreach ([Project::class, ProjectStage::class, ProjectBrief::class, Document::class, Invoice::class, Payment::class, SupportRequest::class, RequestMessage::class, CareActivity::class, ExternalCommunication::class] as $model) {
+        RateLimiter::for('integrations', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
+        foreach ([Project::class, ProjectStage::class, ProjectBrief::class, Document::class, Invoice::class, Payment::class, SupportRequest::class, RequestMessage::class, CareActivity::class, ExternalCommunication::class, WorkItem::class] as $model) {
             $model::observe(ActivityObserver::class);
         }
     }

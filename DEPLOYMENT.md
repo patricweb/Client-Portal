@@ -50,9 +50,12 @@ Store encrypted copies outside the server. Schedule backups according to the bus
 ## 5. Launch gates outside the codebase
 
 - DNS and TLS certificate configured and renewal tested;
+- rotated Telegram and Discord bot tokens stored only in the production environment;
+- private Telegram work chat/topic, webhook secret and allowed team user IDs configured;
+- Discord forum IDs configured and the bot limited to the required private forums;
 - SMTP SPF/DKIM/DMARC configured;
 - Telegram and S3 credentials stored in the deployment secret manager;
-- privacy policy, contract, Scope of Work, invoice, tax, retention, and consent wording reviewed for the operating jurisdiction;
+- privacy notice, simple confirmation wording, invoice details, tax handling and retention choices reviewed by the owner for the operating jurisdiction;
 - Owner default credentials replaced and staff access reviewed;
 - accessibility/browser smoke test completed on current Chrome, Safari, Firefox, Edge, iOS, and Android;
 - restore drill and incident contact process completed.

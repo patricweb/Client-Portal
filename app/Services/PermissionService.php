@@ -8,11 +8,11 @@ use App\Models\User;
 class PermissionService
 {
     private const MATRIX = [
-        'admin' => ['manage_leads', 'manage_clients', 'manage_projects', 'manage_documents', 'manage_billing', 'manage_care', 'manage_requests', 'view_activity', 'manage_team'],
-        'project_manager' => ['manage_clients', 'manage_projects', 'manage_documents', 'manage_requests', 'view_activity'],
-        'developer' => ['manage_projects', 'view_activity'],
-        'support' => ['manage_care', 'manage_requests', 'view_activity'],
-        'accountant' => ['manage_billing', 'view_activity'],
+        'admin' => ['manage_leads', 'manage_clients', 'manage_projects', 'manage_documents', 'manage_billing', 'manage_care', 'manage_requests', 'manage_work_items', 'view_work_item_financials', 'view_activity', 'manage_team'],
+        'project_manager' => ['manage_clients', 'manage_projects', 'manage_documents', 'manage_requests', 'manage_work_items', 'view_work_item_financials', 'view_activity'],
+        'developer' => ['manage_projects', 'manage_work_items', 'view_activity'],
+        'support' => ['manage_care', 'manage_requests', 'manage_work_items', 'view_activity'],
+        'accountant' => ['manage_billing', 'view_work_item_financials', 'view_activity'],
         'client' => ['client_portal'],
     ];
 

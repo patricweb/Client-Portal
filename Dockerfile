@@ -45,8 +45,8 @@ COPY docker/php.ini /usr/local/etc/php/conf.d/99-ikira.ini
 COPY composer.json composer.lock ./
 RUN composer install --no-interaction --prefer-dist --no-scripts --no-progress ${COMPOSER_INSTALL_FLAGS}
 
-COPY package.json ./
-RUN npm install --ignore-scripts
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
 
 COPY . .
 

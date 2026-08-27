@@ -19,6 +19,19 @@ abstract class TestCase extends BaseTestCase
             'SESSION_DRIVER' => 'array',
             'TELEGRAM_BOT_TOKEN' => '',
             'TELEGRAM_OWNER_CHAT_ID' => '',
+            'TELEGRAM_WORK_CHAT_ID' => '',
+            'TELEGRAM_WORK_TOPIC_ID' => '',
+            'TELEGRAM_WEBHOOK_SECRET' => '',
+            'TELEGRAM_ALLOWED_USER_IDS' => '',
+            'DISCORD_BOT_TOKEN' => '',
+            'DISCORD_FORUM_WEB' => '',
+            'DISCORD_FORUM_TELEGRAM_BOT' => '',
+            'DISCORD_FORUM_PYTHON' => '',
+            'DISCORD_FORUM_DESIGN' => '',
+            'DISCORD_FORUM_DEVELOPMENT' => '',
+            'DISCORD_FORUM_3D' => '',
+            'DISCORD_FORUM_OTHER' => '',
+            'WORK_ITEM_CHANNELS_INCLUDE_PRICE' => 'false',
         ];
 
         foreach ($environment as $key => $value) {

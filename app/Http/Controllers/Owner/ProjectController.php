@@ -67,7 +67,7 @@ class ProjectController extends Controller
     {
         abort_unless($request->user()->canAccessProject($project), 404);
 
-        return view('owner.projects.show', ['project' => $project->load(['company.contacts', 'stages', 'brief.answers.field', 'attachments'])]);
+        return view('owner.projects.show', ['project' => $project->load(['company.contacts', 'stages', 'brief.answers.field', 'attachments', 'workItems.assignee'])]);
     }
 
     public function updateStage(Request $request, Project $project, ProjectStage $stage): RedirectResponse

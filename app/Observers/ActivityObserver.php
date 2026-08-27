@@ -11,6 +11,7 @@ use App\Models\ProjectBrief;
 use App\Models\ProjectStage;
 use App\Models\RequestMessage;
 use App\Models\SupportRequest;
+use App\Models\WorkItem;
 use App\Services\ActivityLogger;
 use Illuminate\Database\Eloquent\Model;
 
@@ -29,7 +30,7 @@ class ActivityObserver
     private function record(Model $model, string $action): void
     {
         [$companyId, $projectId] = $this->context($model);
-        $visibility = $model instanceof ExternalCommunication || ($model instanceof RequestMessage && $model->is_internal) ? 'internal' : 'public';
+        $visibility = $model instanceof WorkItem || $model instanceof ExternalCommunication || ($model instanceof RequestMessage && $model->is_internal) ? 'internal' : 'public';
         $label = class_basename($model);
         $properties = $action === 'updated' ? $model->getChanges() : $model->getAttributes();
         app(ActivityLogger::class)->log(
@@ -60,7 +61,7 @@ class ActivityObserver
         if ($model instanceof ExternalCommunication) {
             return [$model->company_id, $model->project_id];
         }
-        if ($model instanceof Document || $model instanceof Invoice || $model instanceof SupportRequest) {
+        if ($model instanceof Document || $model instanceof Invoice || $model instanceof SupportRequest || $model instanceof WorkItem) {
             return [$model->company_id, $model->project_id];
         }
 

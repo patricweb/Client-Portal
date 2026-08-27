@@ -70,6 +70,11 @@ class Project extends Model
         return $this->hasMany(SupportRequest::class);
     }
 
+    public function workItems()
+    {
+        return $this->hasMany(WorkItem::class);
+    }
+
     public function teamMembers()
     {
         return $this->belongsToMany(User::class)->withPivot('assigned_by')->withTimestamps();

@@ -63,6 +63,16 @@ class User extends Authenticatable
         return $this->belongsToMany(Project::class)->withPivot('assigned_by')->withTimestamps();
     }
 
+    public function assignedWorkItems()
+    {
+        return $this->hasMany(WorkItem::class, 'assigned_to');
+    }
+
+    public function createdWorkItems()
+    {
+        return $this->hasMany(WorkItem::class, 'created_by');
+    }
+
     public function canAccessProject(Project $project): bool
     {
         return $this->role === UserRole::Owner

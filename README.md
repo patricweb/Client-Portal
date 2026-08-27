@@ -53,7 +53,7 @@ After every `git pull`, synchronize dependencies before migrations:
 
 ```bash
 docker compose exec app composer install --no-interaction --prefer-dist
-docker compose exec app npm install --ignore-scripts
+docker compose exec app npm ci --ignore-scripts
 docker compose exec app php artisan migrate --force
 docker compose exec app npm run build
 docker compose restart queue scheduler
@@ -83,3 +83,9 @@ The portal uses three short records: **Project Confirmation**, an optional **Cha
 ## Production deployment
 
 Use [DEPLOYMENT.md](DEPLOYMENT.md) and `docker-compose.production.yml`. Production launch requires an external HTTPS reverse proxy, real SMTP/Telegram/storage credentials, strong secrets, and a verified database restore test.
+
+## Internal team dispatcher
+
+The staff-only `Work Items` module replaces the separate Python/JSON order dispatcher. It stores assignments in MySQL, links them to projects and team members, keeps prices hidden from non-financial roles, and synchronizes statuses with private Telegram topics and Discord forums through the Laravel queue. Client accounts cannot access this module.
+
+Configuration and token-rotation instructions: [docs/INTERNAL_WORK_ITEMS.md](docs/INTERNAL_WORK_ITEMS.md).

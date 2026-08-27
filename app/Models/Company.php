@@ -46,4 +46,9 @@ class Company extends Model
     {
         return $this->hasMany(SupportRequest::class);
     }
+
+    public function workItems()
+    {
+        return $this->hasMany(WorkItem::class);
+    }
 }

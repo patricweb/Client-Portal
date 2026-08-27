@@ -4,6 +4,8 @@
 
 > Актуальное упрощение от 2026-08-28: обычный workflow больше не создаёт отдельные Proposal, MSA, SOW, Change Order, Acceptance, Handover и Care Agreement. Для новых проектов используются Project Confirmation, опциональный Change Confirmation, Delivery Confirmation и отдельные Invoices. Клиент подтверждает точную PDF-версию в портале; legacy-документы сохраняются только для истории и совместимости. Операционная инструкция: `docs/DOCUMENT_WORKFLOW.md`.
 
+> Внутренний модуль команды от 2026-08-28: `Work Items` хранит задания в MySQL, связывает их с проектами и сотрудниками, синхронизирует статусы с закрытыми Telegram/Discord-каналами и полностью скрыт от клиентов. Инструкция: `docs/INTERNAL_WORK_ITEMS.md`.
+
 Этот документ предназначен для разработчика, который продолжит работу над проектом **Ikira Client Portal** без доступа к предыдущей переписке.
 
 В документе зафиксированы:
@@ -1280,8 +1282,8 @@ We are currently working on Development.
 
 Текущий набор:
 
-- 38 tests;
-- 215 assertions;
+- 47 tests;
+- 260 assertions;
 - Owner login;
 - password reset request;
 - temporary password enforcement;
