@@ -8,7 +8,7 @@
 @php($buyer = $invoice->snapshot['company'] ?? [])
 <header><div>{{ $provider['legal_name'] ?? '' }}</div><h1>{{ $invoice->kind === 'advance' ? 'ADVANCE INVOICE' : ($invoice->kind === 'final' ? 'FINAL MILESTONE INVOICE' : 'INVOICE') }}</h1><div>{{ $invoice->invoice_number }} | {{ $invoice->currency }}</div>@if($invoice->status === 'draft')<p class="draft">DRAFT - not yet issued</p>@endif</header>
 <h2>Provider / bill to</h2><p><strong>{{ $provider['legal_name'] ?? '' }}</strong><br>{{ $provider['address'] ?? '' }}<br>{{ $provider['country'] ?? '' }} | {{ $provider['email'] ?? '' }}</p>@if($provider['registration_id'] ?? null)<p>Registration / tax ID: {{ $provider['registration_id'] }}</p>@endif
-<p><strong>Client: {{ ($buyer['billing_name'] ?? null) ?: ($buyer['name'] ?? '') }}</strong><br>{{ $buyer['billing_address'] ?? '' }}<br>{{ $buyer['email'] ?? '' }}</p>
+<p><strong>Client: {{ ($buyer['billing_name'] ?? null) ?: ($buyer['name'] ?? '') }}</strong>@if(filled($buyer['billing_address'] ?? null))<br>{{ $buyer['billing_address'] }}@endif @if(filled($buyer['email'] ?? null))<br>{{ $buyer['email'] }}@endif</p>
 <p>Issued: {{ $invoice->issue_date->format('F j, Y') }} | Due: {{ $invoice->due_date->format('F j, Y') }}</p>
 @php($agreementNumber = $invoice->snapshot['agreement_number'] ?? $invoice->snapshot['sow_number'] ?? null)
 @php($agreementVersion = $invoice->snapshot['agreement_version'] ?? $invoice->snapshot['sow_version'] ?? null)

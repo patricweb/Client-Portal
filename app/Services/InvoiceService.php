@@ -72,8 +72,11 @@ class InvoiceService
             if ($profile->missing(true)) {
                 throw ValidationException::withMessages(['provider' => 'Complete and confirm provider / bank settings, then refresh this invoice draft profile.']);
             }
-            if (($profile->details['currency'] ?? '') !== $invoice->currency || blank($invoice->tax_description) || blank($invoice->snapshot['company']['billing_address'] ?? null)) {
-                throw ValidationException::withMessages(['invoice' => 'Confirm the account currency, invoice tax treatment and client billing address before sending.']);
+            if (($profile->details['currency'] ?? '') !== $invoice->currency) {
+                throw ValidationException::withMessages(['currency' => 'Invoice currency must match the confirmed receiving account currency.']);
+            }
+            if (blank($invoice->tax_description)) {
+                throw ValidationException::withMessages(['tax_description' => 'Confirm the invoice tax treatment before sending.']);
             }
         }
         if (! in_array($invoice->kind, ['advance', 'final'])) {

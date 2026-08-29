@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Project;
+use App\Models\ProviderProfile;
 use App\Models\User;
 use App\Services\InvoiceService;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -101,6 +102,26 @@ class StagesFourToSixTest extends TestCase
         ])->assertRedirect();
         $this->assertSame('paid', $invoice->fresh()->status);
         $this->assertSame(0.0, $invoice->remainingAmount());
+    }
+
+    public function test_invoice_can_be_sent_without_a_client_billing_address(): void
+    {
+        [$owner, , $company, $project] = $this->actors();
+        $profile = ProviderProfile::current();
+        $profile->update(['details' => array_replace($profile->details, [
+            'address' => 'Provider address', 'country' => 'Moldova', 'email' => 'provider@example.test',
+            'details_confirmed' => true, 'bank_name' => 'Test Bank', 'beneficiary' => 'Test Provider',
+            'iban' => 'TEST-IBAN', 'swift' => 'TESTSWIFT', 'currency' => 'USD', 'bank_confirmed' => true,
+            'tax_note' => 'Issued by an individual service provider. VAT is not charged.',
+        ])]);
+        $invoice = app(InvoiceService::class)->create([
+            'company_id' => $company->id, 'project_id' => $project->id, 'issue_date' => today(),
+            'due_date' => today()->addDays(4), 'currency' => 'USD', 'status' => 'draft', 'discount' => 0,
+        ], [['description' => 'Development', 'quantity' => 1, 'unit_price' => 100]]);
+
+        $this->assertNull($company->billing_address);
+        $this->actingAs($owner)->post(route('owner.invoices.send', $invoice))->assertSessionHasNoErrors();
+        $this->assertSame('sent', $invoice->fresh()->status);
     }
 
     public function test_client_billing_is_isolated_by_company(): void
