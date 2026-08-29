@@ -30,7 +30,7 @@ services:
   app:
     <<: *app
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "127.0.0.1:${APP_PORT:-8080}:80"
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost/up"]
       interval: 15s
