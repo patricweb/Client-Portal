@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
+use App\Jobs\DeliverTelegramNotification;
 use App\Models\Company;
+use App\Models\NotificationDelivery;
 use App\Models\Project;
 use App\Models\RequestMessage;
 use App\Models\SupportRequest;
@@ -12,6 +14,7 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class StagesSevenToElevenTest extends TestCase
@@ -50,6 +53,34 @@ class StagesSevenToElevenTest extends TestCase
         $this->assertDatabaseHas('notifications', ['notifiable_id' => $client->id]);
         $this->assertDatabaseHas('notification_deliveries', ['user_id' => $client->id, 'channel' => 'portal']);
         $this->assertDatabaseMissing('notification_deliveries', ['user_id' => $client->id, 'channel' => 'email']);
+    }
+
+    public function test_telegram_notification_contains_portal_link_and_respects_message_limit(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+        config([
+            'services.telegram.bot_token' => 'test-token',
+            'services.telegram.owner_chat_id' => '12345',
+        ]);
+        $delivery = NotificationDelivery::create([
+            'event' => 'brief_submitted', 'level' => 'action_required', 'channel' => 'telegram',
+            'recipient' => '12345', 'status' => 'pending',
+            'payload' => [
+                'title' => 'Brief submitted', 'message' => str_repeat('Answer ', 1000),
+                'url' => 'https://portal.test/owner/projects/1',
+            ],
+        ]);
+
+        (new DeliverTelegramNotification($delivery->id))->handle();
+
+        Http::assertSent(function ($request) {
+            $text = $request->data()['text'];
+
+            return mb_strlen($text) <= 4096
+                && str_contains($text, 'Open in portal:')
+                && str_contains($text, 'https://portal.test/owner/projects/1');
+        });
+        $this->assertSame('sent', $delivery->fresh()->status);
     }
 
     public function test_activity_log_separates_public_and_internal_events(): void

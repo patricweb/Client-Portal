@@ -16,7 +16,7 @@ class NotificationService
         $users = $recipients instanceof User ? collect([$recipients]) : collect($recipients);
         foreach ($users->filter() as $user) {
             $payload = compact('event', 'level', 'title', 'message', 'url');
-            $preferences = $user->notification_preferences ?? ['portal' => true, 'email' => true, 'telegram' => false];
+            $preferences = $user->notification_preferences ?? [];
             if ($preferences['portal'] ?? true) {
                 $user->notify(new PortalNotification($payload));
                 NotificationDelivery::create([

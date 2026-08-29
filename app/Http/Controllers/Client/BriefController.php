@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\ProjectBrief;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,7 @@ class BriefController extends Controller
     public function edit(Request $request, Project $project): View
     {
         $this->authorizeCompany($request, $project);
-        $brief = $project->brief()->with(['template.fields', 'answers'])->firstOrFail();
+        $brief = $project->brief()->with(['template.fields', 'answers.field'])->firstOrFail();
 
         return view('client.brief.edit', compact('project', 'brief'));
     }
@@ -49,7 +50,7 @@ class BriefController extends Controller
             }
             app(NotificationService::class)->send(
                 User::where('role', 'owner')->get(), 'brief_submitted', 'action_required',
-                'Brief submitted', $project->name, route('owner.projects.show', $project)
+                'Brief submitted', $this->notificationMessage($project, $brief), route('owner.projects.show', $project)
             );
 
             return redirect()->route('client.projects.show', $project)->with('success', 'Brief submitted to Ikira.');
@@ -61,5 +62,18 @@ class BriefController extends Controller
     private function authorizeCompany(Request $request, Project $project): void
     {
         abort_unless($project->company_id === $request->user()->company_id, 404);
+    }
+
+    private function notificationMessage(Project $project, ProjectBrief $brief): string
+    {
+        $answerMap = $brief->answers->pluck('value', 'brief_template_field_id');
+        $fields = $brief->template?->fields ?? collect();
+        $answers = $fields->sortBy('position')->map(function ($field) use ($answerMap) {
+            $answer = $answerMap->get($field->id);
+
+            return $field->label."\n".(filled($answer) ? $answer : 'No answer provided.');
+        })->implode("\n\n");
+
+        return "Project: {$project->name}\n\nSubmitted brief\n\n".$answers;
     }
 }

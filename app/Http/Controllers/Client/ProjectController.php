@@ -18,7 +18,7 @@ class ProjectController extends Controller
     {
         $this->authorizeCompany($request, $project);
 
-        return view('client.projects.show', ['project' => $project->load(['stages.attachments', 'brief', 'attachments'])]);
+        return view('client.projects.show', ['project' => $project->load(['stages.attachments', 'brief.answers.field', 'attachments'])]);
     }
 
     private function authorizeCompany(Request $request, Project $project): void

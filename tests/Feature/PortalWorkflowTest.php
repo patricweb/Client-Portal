@@ -6,6 +6,7 @@ use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\BriefTemplate;
 use App\Models\Company;
+use App\Models\NotificationDelivery;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -72,6 +73,10 @@ class PortalWorkflowTest extends TestCase
     public function test_client_can_save_and_submit_a_brief(): void
     {
         [$client, $project] = $this->clientWithProject('Acme');
+        $owner = User::factory()->create([
+            'role' => UserRole::Owner, 'status' => AccountStatus::Active, 'must_change_password' => false,
+            'notification_preferences' => null,
+        ]);
         $template = BriefTemplate::create(['name' => 'Website Brief', 'project_type' => 'website']);
         $field = $template->fields()->create(['key' => 'goals', 'label' => 'Project goals', 'is_required' => true, 'position' => 1]);
         $brief = $project->brief()->create(['brief_template_id' => $template->id]);
@@ -82,6 +87,18 @@ class PortalWorkflowTest extends TestCase
 
         $this->assertDatabaseHas('project_briefs', ['id' => $brief->id, 'status' => 'submitted']);
         $this->assertDatabaseHas('brief_answers', ['project_brief_id' => $brief->id, 'value' => 'Generate qualified leads.']);
+
+        $delivery = NotificationDelivery::where('user_id', $owner->id)->where('channel', 'email')->firstOrFail();
+        $this->assertStringContainsString('Project goals', $delivery->payload['message']);
+        $this->assertStringContainsString('Generate qualified leads.', $delivery->payload['message']);
+        $this->assertDatabaseHas('notification_deliveries', ['user_id' => $owner->id, 'channel' => 'telegram']);
+
+        $this->actingAs($owner)->get(route('owner.projects.show', $project))
+            ->assertOk()->assertSee('Submitted brief')->assertSee('Project goals')->assertSee('Generate qualified leads.');
+        $this->actingAs($client)->get(route('client.brief.edit', $project))
+            ->assertOk()->assertSee('Your submitted answers are shown below.')->assertSee('Project goals')->assertSee('Generate qualified leads.');
+        $this->actingAs($client)->get(route('client.projects.show', $project))
+            ->assertOk()->assertSee('Submitted brief')->assertSee('Project goals')->assertSee('Generate qualified leads.');
     }
 
     public function test_owner_can_create_a_client_with_portal_access(): void

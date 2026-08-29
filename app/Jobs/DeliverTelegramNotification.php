@@ -30,12 +30,29 @@ class DeliverTelegramNotification implements ShouldQueue
         try {
             $payload = $delivery->payload;
             Http::timeout(10)->retry(2, 250)->post("https://api.telegram.org/bot{$token}/sendMessage", [
-                'chat_id' => $chatId, 'text' => $payload['title']."\n\n".$payload['message'],
+                'chat_id' => $chatId, 'text' => $this->messageText($payload),
             ])->throw();
             $delivery->update(['status' => 'sent', 'sent_at' => now(), 'failed_at' => null, 'error_message' => null]);
         } catch (Throwable $exception) {
             $delivery->update(['status' => 'failed', 'failed_at' => now(), 'error_message' => str($exception->getMessage())->limit(2000)]);
             throw $exception;
         }
+    }
+
+    private function messageText(array $payload): string
+    {
+        $prefix = $payload['title']."\n\n";
+        $link = filled($payload['url'] ?? null)
+            ? "\n\nOpen in portal:\n".$payload['url']
+            : '';
+        $available = max(0, 4096 - mb_strlen($prefix.$link));
+        $message = (string) $payload['message'];
+
+        if (mb_strlen($message) > $available) {
+            $suffix = "\n\n[Message shortened. Open the portal for the complete brief.]";
+            $message = mb_substr($message, 0, max(0, $available - mb_strlen($suffix))).$suffix;
+        }
+
+        return $prefix.$message.$link;
     }
 }
