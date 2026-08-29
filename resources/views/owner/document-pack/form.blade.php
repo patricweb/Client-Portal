@@ -40,7 +40,7 @@
             </div></section>@endif
         @endforeach
         @if($key === 'delivery_confirmation')<section class="rounded-2xl border border-slate-200 bg-white p-6"><label class="block text-sm font-medium">Agreed minor items and completion dates (optional)<textarea name="minor_items" rows="4" class="mt-2 w-full rounded-lg border border-slate-300 p-2.5">{{ old('minor_items', $document?->currentVersionRecord()?->snapshot['minor_items'] ?? '') }}</textarea></label><p class="mt-2 text-xs text-slate-500">Enter only a precise list you agree to finish. Leaving it blank disables “Confirm with minor items”.</p></section>@endif
-        <div class="sticky bottom-3 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-lg"><p class="text-sm text-slate-500">Saving creates a draft, not a signature or a client notification.</p><button class="shrink-0 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white">Save draft & preview</button></div>
+        <div class="sticky bottom-3 flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4"><p class="text-sm text-slate-500">Saving creates a draft, not a signature or a client notification.</p><button class="shrink-0 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-medium text-white">Save draft & preview</button></div>
     </form>
     @endif
 </x-layouts.app>

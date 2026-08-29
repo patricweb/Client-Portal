@@ -18,3 +18,166 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/*
+ * Ikira interface system
+ * Dark-only, deliberately flat and neutral. Printable documents use their own
+ * templates and are not affected by these interface overrides.
+ */
+:root {
+    color-scheme: dark;
+    --ikira-canvas: #0b0d10;
+    --ikira-sidebar: #0e1013;
+    --ikira-surface: #15181d;
+    --ikira-surface-raised: #1a1e24;
+    --ikira-border: #2a2f37;
+    --ikira-border-soft: #22262d;
+    --ikira-text: #f2f3f5;
+    --ikira-muted: #939aa5;
+    --ikira-control: #111419;
+    --ikira-action: #f0f1f3;
+    --ikira-action-text: #111318;
+}
+
+body {
+    background: var(--ikira-canvas) !important;
+    color: var(--ikira-text) !important;
+}
+
+::selection { background: #d6d9dd; color: #101216; }
+
+a, button, input, select, textarea { transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, opacity 140ms ease; }
+
+input:not([type='checkbox']):not([type='radio']):not([type='file']),
+select,
+textarea {
+    border-color: var(--ikira-border) !important;
+    background-color: var(--ikira-control) !important;
+    color: var(--ikira-text) !important;
+    box-shadow: none !important;
+}
+
+input::placeholder, textarea::placeholder { color: #656c76 !important; }
+select option { background: var(--ikira-control); color: var(--ikira-text); }
+input[type='checkbox'], input[type='radio'] { accent-color: #d8dadd; }
+input[type='file'] { color: var(--ikira-muted) !important; }
+
+input:focus, select:focus, textarea:focus {
+    border-color: #737b86 !important;
+    outline: 1px solid #737b86 !important;
+    outline-offset: 0;
+    box-shadow: none !important;
+}
+
+table { color: var(--ikira-text); }
+thead { color: var(--ikira-muted) !important; }
+tbody tr { border-color: var(--ikira-border-soft) !important; }
+tbody tr:hover { background-color: #191c21; }
+
+/* Surfaces */
+.bg-white,
+.bg-slate-50,
+.bg-slate-100,
+.bg-slate-200 { background-color: var(--ikira-surface) !important; }
+.bg-slate-950 { background-color: var(--ikira-sidebar) !important; }
+.bg-slate-900 { background-color: var(--ikira-action) !important; color: var(--ikira-action-text) !important; }
+.bg-slate-800 { background-color: var(--ikira-surface-raised) !important; }
+
+/* Type */
+.text-slate-900,
+.text-slate-800,
+.text-slate-700,
+.text-slate-600 { color: var(--ikira-text) !important; }
+.text-slate-500,
+.text-slate-400 { color: var(--ikira-muted) !important; }
+.text-slate-300,
+.text-slate-200,
+.text-white { color: var(--ikira-text) !important; }
+
+/* Neutral active states and actions */
+.bg-indigo-500,
+.bg-indigo-600,
+.bg-indigo-700,
+.bg-emerald-500,
+.bg-emerald-600,
+.bg-amber-600 { background-color: var(--ikira-action) !important; color: var(--ikira-action-text) !important; }
+.bg-indigo-50 { background-color: #191d22 !important; }
+.text-indigo-500,
+.text-indigo-600,
+.text-indigo-700,
+.text-emerald-600,
+.text-emerald-700,
+.text-indigo-100,
+.text-indigo-200 { color: #d9dce0 !important; }
+.border-indigo-200,
+.border-indigo-300,
+.border-emerald-200 { border-color: #414750 !important; }
+
+/* Restrained semantic states */
+.bg-emerald-50 { background-color: #14201a !important; }
+.text-emerald-800, .text-emerald-900 { color: #a9c3b3 !important; }
+.bg-amber-50 { background-color: #211d14 !important; }
+.text-amber-700, .text-amber-800, .text-amber-900 { color: #c5b58e !important; }
+.border-amber-200, .border-amber-300 { border-color: #4b4129 !important; }
+.bg-orange-50 { background-color: #211b16 !important; }
+.text-orange-700 { color: #c7aa93 !important; }
+.bg-violet-50 { background-color: #1c1921 !important; }
+.text-violet-700 { color: #b9acbf !important; }
+.bg-red-50 { background-color: #241719 !important; }
+.bg-red-500, .bg-red-600 { background-color: #8f454d !important; }
+.text-red-600, .text-red-700, .text-red-800 { color: #d9a4aa !important; }
+.border-red-200, .border-red-300 { border-color: #583238 !important; }
+
+/* Borders and depth: separation comes from lines, never glow or shadow. */
+.border-slate-100,
+.border-slate-200,
+.border-slate-300,
+.border-slate-700,
+.border-slate-800 { border-color: var(--ikira-border) !important; }
+.divide-slate-100 > :not(:last-child),
+.divide-slate-200 > :not(:last-child) { border-color: var(--ikira-border-soft) !important; }
+.shadow,
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl { box-shadow: none !important; }
+
+/* Buttons and navigation */
+button[class*='bg-'],
+a[class*='bg-indigo-'],
+a[class*='bg-slate-900'] { font-weight: 600; }
+button[class*='bg-slate-900'],
+button[class*='bg-indigo-'],
+button[class*='bg-emerald-'],
+button[class*='bg-amber-'],
+a[class*='bg-slate-900'],
+a[class*='bg-indigo-'],
+a[class*='bg-emerald-'] { color: var(--ikira-action-text) !important; }
+button[class*='bg-']:hover,
+a[class*='bg-indigo-']:hover,
+a[class*='bg-slate-900']:hover { opacity: .86; }
+.hover\:bg-slate-800:hover { background-color: var(--ikira-surface-raised) !important; }
+.hover\:bg-slate-50:hover,
+.hover\:bg-slate-100:hover { background-color: #1b1f25 !important; }
+.brand-mark { background-color: #171a1f !important; color: var(--ikira-text) !important; }
+
+/* Keep progress indicators clear but monochrome. */
+.h-2.bg-slate-100 { background-color: #292e35 !important; }
+.h-2.bg-indigo-500,
+.h-2.bg-indigo-600 { background-color: #cdd1d6 !important; }
+
+@media (min-width: 1024px) {
+    aside nav { scrollbar-color: #363c45 transparent; scrollbar-width: thin; }
+    aside > div:last-of-type { margin-top: 1.5rem; }
+}
+
+/* Document preview is a readable paper-like area inside the dark application. */
+.document-preview {
+    border: 1px solid var(--ikira-border);
+    background: #f4f4f2 !important;
+    color: #171717 !important;
+}
+.document-preview h1, .document-preview h2, .document-preview p,
+.document-preview td, .document-preview th { color: #171717 !important; }
+.document-preview th { background: #202020 !important; color: #fff !important; }
