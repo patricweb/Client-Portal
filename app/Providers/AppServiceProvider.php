@@ -17,6 +17,7 @@ use App\Observers\ActivityObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,6 +35,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (request()->header('x-forwarded-proto') === 'https') {
+            URL::forceScheme('https');
+        }
+
         RateLimiter::for('login', fn (Request $request) => Limit::perMinute(5)->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
         RateLimiter::for('integrations', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
         foreach ([Project::class, ProjectStage::class, ProjectBrief::class, Document::class, Invoice::class, Payment::class, SupportRequest::class, RequestMessage::class, CareActivity::class, ExternalCommunication::class, WorkItem::class] as $model) {
