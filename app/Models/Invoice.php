@@ -62,6 +62,16 @@ class Invoice extends Model
         return max(0, (float) $this->total - $this->paidAmount());
     }
 
+    public function paymentDescription(): string
+    {
+        $agreementNumber = data_get($this->snapshot, 'agreement_number')
+            ?: data_get($this->snapshot, 'sow_number');
+
+        return 'Payment for software development services under Invoice '.$this->invoice_number
+            .($agreementNumber ? ' and Agreement '.$agreementNumber : '')
+            .'.';
+    }
+
     public function refreshPaymentStatus(): void
     {
         if ($this->status === 'void') {

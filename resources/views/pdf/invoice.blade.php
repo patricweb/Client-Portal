@@ -19,7 +19,7 @@
 <table class="totals"><tr><td>Subtotal</td><td class="right">{{ number_format($invoice->subtotal,2) }}</td></tr><tr><td>Discount</td><td class="right">-{{ number_format($invoice->discount,2) }}</td></tr><tr><td>Tax</td><td class="right">{{ number_format($invoice->tax_amount,2) }}</td></tr><tr class="grand"><td>Total this invoice</td><td class="right">{{ $invoice->currency }} {{ number_format($invoice->total,2) }}</td></tr></table>
 <p class="muted">Tax treatment: {{ $invoice->tax_description ?: 'Not confirmed - draft only' }}</p>
 @if($invoice->kind !== 'standard')<p>This invoice bills only the stated milestone. Earlier invoices remain separate, even if unpaid; this is not a second charge for the advance.</p>@endif
-<h2>Payment instructions</h2><p class="instructions">{{ $invoice->payment_instructions }}</p><p>Payment reference: {{ $invoice->invoice_number }}{{ $agreementNumber ? ' / '.$agreementNumber : '' }}</p>
+<h2>Payment instructions</h2><p class="instructions">{{ $invoice->payment_instructions }}</p><p><strong>Payment description / reference:</strong><br>{{ $invoice->paymentDescription() }}</p>
 @if($invoice->public_notes)<h2>Notes</h2><p class="instructions">{{ $invoice->public_notes }}</p>@endif
 <p class="muted">Payment request, not a receipt or delivery confirmation. Confirm changed bank instructions through a previously trusted channel. Current payment status is available in the portal; this issued PDF is not rewritten when payments arrive.</p>
 <div class="footer">{{ $provider['legal_name'] ?? '' }} | {{ $invoice->invoice_number }} | Issued invoice record</div>
