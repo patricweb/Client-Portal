@@ -197,10 +197,11 @@ class DocumentPackTest extends TestCase
     public function test_versions_are_immutable_and_custom_html_is_cleaned(): void
     {
         [$owner, , $company, $project] = $this->actors();
-        $clean = app(DocumentHtmlService::class)->clean('<p onclick="evil()">Safe</p><script>alert(1)</script><img src="file:///etc/passwd"><iframe src="https://example.com"></iframe>');
+        $clean = app(DocumentHtmlService::class)->clean('<p onclick="evil()">Provider: Safe</p><script>alert(1)</script><img src="file:///etc/passwd"><iframe src="https://example.com"></iframe>');
         foreach (['script', 'onclick', '<img', '<iframe'] as $bad) {
             $this->assertStringNotContainsString($bad, $clean);
         }
+        $this->assertStringContainsString('<strong>Provider:</strong> Safe', $clean);
         $document = $this->makePack($owner, $company, $project, 'project_confirmation');
         $this->expectException(\LogicException::class);
         $document->currentVersionRecord()->update(['content' => 'silently rewritten']);

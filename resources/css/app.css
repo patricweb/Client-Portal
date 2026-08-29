@@ -1,16 +1,5 @@
 @import 'tailwindcss';
 
-.document-preview { font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
-.document-preview h1 { margin: 1.5rem 0 .75rem; font-size: 1.6rem; font-weight: 600; }
-.document-preview h2 { margin: 1.25rem 0 .5rem; font-size: 1.1rem; font-weight: 600; color: #267f7c; }
-.document-preview p { margin: .75rem 0; }
-.document-preview table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-.document-preview th, .document-preview td { border: 1px solid #d4dfe4; padding: .65rem; text-align: left; vertical-align: top; }
-.document-preview th { background: #173246; color: white; }
-.document-preview .unfilled { background: #fffbeb; color: #b45309; }
-.document-preview .page-break { margin-top: 2rem; border-top: 1px solid #d4dfe4; }
-.document-preview > div > h1:first-child { display: none; }
-
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
@@ -174,10 +163,52 @@ a[class*='bg-slate-900']:hover { opacity: .86; }
 
 /* Document preview is a readable paper-like area inside the dark application. */
 .document-preview {
-    border: 1px solid var(--ikira-border);
-    background: #f4f4f2 !important;
+    box-sizing: border-box;
+    width: min(100%, 880px);
+    min-height: 1050px;
+    margin: 0 auto;
+    padding: 4rem 4.5rem 5rem;
+    border: 1px solid #c8c8c5;
+    background: #fafaf8 !important;
     color: #171717 !important;
+    counter-reset: document-section;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
 }
-.document-preview h1, .document-preview h2, .document-preview p,
-.document-preview td, .document-preview th { color: #171717 !important; }
-.document-preview th { background: #202020 !important; color: #fff !important; }
+.document-preview h1:first-child,
+.document-preview h1:first-child + p { display: none; }
+.document-preview h1 { margin: 2rem 0 1rem; font-size: 1.8rem; font-weight: 700; line-height: 1.2; }
+.document-preview h2 {
+    counter-increment: document-section;
+    margin: 2.25rem 0 .8rem;
+    padding-top: .7rem;
+    border-top: 2px solid #171717;
+    color: #171717 !important;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+.document-preview h2::before {
+    content: counter(document-section, decimal-leading-zero) '  ';
+    margin-right: .35rem;
+    font-size: .72rem;
+    letter-spacing: .08em;
+}
+.document-preview h3 { margin: 1.5rem 0 .6rem; color: #171717 !important; font-size: 1rem; font-weight: 700; }
+.document-preview p { margin: .65rem 0; color: #272727 !important; }
+.document-preview p strong:first-child { color: #111 !important; font-family: ui-sans-serif, system-ui, sans-serif; font-size: .82rem; }
+.document-preview ul, .document-preview ol { margin: .65rem 0 .9rem; padding-left: 1.4rem; }
+.document-preview li { margin: .3rem 0; }
+.document-preview table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.25rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: .82rem; }
+.document-preview th, .document-preview td { border: 1px solid #858585; padding: .75rem; text-align: left; vertical-align: top; color: #171717 !important; }
+.document-preview th { background: #ececea !important; color: #111 !important; font-weight: 700; }
+.document-preview blockquote { margin: 1rem 0; padding: .2rem 0 .2rem 1rem; border-left: 3px solid #171717; color: #333; }
+.document-preview .unfilled { border: 1px dashed #555; background: transparent !important; color: #222 !important; padding: 1px 4px; }
+.document-preview .page-break { margin-top: 3rem; border-top: 1px dashed #999; }
+
+@media (max-width: 700px) {
+    .document-preview { min-height: 0; padding: 2rem 1.4rem 3rem; font-size: 14px; }
+}

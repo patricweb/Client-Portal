@@ -1,7 +1,7 @@
 <x-layouts.app :title="($currentVersion->snapshot['title'] ?? $document->title).' - Ikira Portal'">
     @php($isCurrent = $currentVersion->version === $document->current_version)
     <div class="mb-7 flex flex-wrap justify-between gap-4"><div><p class="text-sm font-medium text-indigo-600">{{ $document->document_number }} · Version {{ $currentVersion->version }}</p><h1 class="mt-1 text-3xl font-semibold">{{ $currentVersion->snapshot['title'] ?? $document->title }}</h1><p class="mt-2 text-slate-500">{{ $isCurrent && $document->status !== 'draft' ? str($document->status)->replace('_',' ')->title() : 'Previously issued version' }}</p></div><a href="{{ route('client.documents.pdf', ['document'=>$document, 'version'=>$currentVersion->version]) }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm">Download PDF</a></div>
-    <section class="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-6"><div class="document-preview">{!! app(\App\Services\DocumentHtmlService::class)->clean($currentVersion->content) !!}</div></section>
+    <section class="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-3 sm:p-6"><div class="document-preview">{!! app(\App\Services\DocumentHtmlService::class)->clean($currentVersion->content) !!}</div></section>
     @if($isCurrent && $document->status === 'awaiting_approval')
         <section class="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
             <h2 class="font-semibold">Confirm this exact version</h2>

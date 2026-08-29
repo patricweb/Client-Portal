@@ -27,6 +27,18 @@ class DocumentHtmlService
             }
         }
 
+        foreach (iterator_to_array($dom->getElementsByTagName('p')) as $paragraph) {
+            $first = $paragraph->firstChild;
+            if (! $first instanceof \DOMText || ! preg_match('/^([\p{L}\p{N}][\p{L}\p{N} &\/().-]{1,47}:)\s*(.*)$/us', $first->nodeValue, $matches)) {
+                continue;
+            }
+
+            $label = $dom->createElement('strong');
+            $label->appendChild($dom->createTextNode($matches[1]));
+            $paragraph->insertBefore($label, $first);
+            $first->nodeValue = filled($matches[2]) ? ' '.$matches[2] : ' ';
+        }
+
         return preg_replace('/<\?xml[^>]+>/', '', $dom->saveHTML()) ?? '';
     }
 }
