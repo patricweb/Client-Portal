@@ -11,10 +11,12 @@ use App\Models\Invoice;
 use App\Models\Project;
 use App\Models\ProviderProfile;
 use App\Models\User;
+use App\Notifications\PortalNotification;
 use App\Services\InvoiceService;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class StagesFourToSixTest extends TestCase
@@ -83,6 +85,66 @@ class StagesFourToSixTest extends TestCase
         $this->assertDatabaseHas('project_stages', ['id' => $stage->id, 'status' => 'approved']);
         $this->assertDatabaseHas('approvals', ['approvable_id' => $stage->id, 'decision' => 'approved']);
         $this->assertSame(100, $project->fresh()->progress);
+    }
+
+    public function test_owner_can_add_edit_and_delete_stages_on_an_existing_project(): void
+    {
+        [$owner, , , $project] = $this->actors();
+
+        $this->actingAs($owner)->post(route('owner.projects.stages.store', $project), [
+            'title' => 'Design review',
+            'client_description' => 'Review the proposed interface.',
+            'due_date' => today()->addWeek()->format('Y-m-d'),
+            'requires_approval' => 1,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $stage = $project->stages()->firstOrFail();
+        $this->assertSame(1, $stage->position);
+        $this->assertSame('not_started', $stage->status);
+        $this->assertTrue($stage->requires_approval);
+
+        $this->actingAs($owner)->patch(route('owner.projects.stages.update', [$project, $stage]), [
+            'title' => 'Updated design review',
+            'client_description' => 'Review all screens.',
+            'status' => 'in_progress',
+            'due_date' => today()->addDays(10)->format('Y-m-d'),
+            'requires_approval' => 1,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('project_stages', [
+            'id' => $stage->id,
+            'title' => 'Updated design review',
+            'status' => 'in_progress',
+        ]);
+
+        $this->actingAs($owner)->delete(route('owner.projects.stages.destroy', [$project, $stage]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('project_stages', ['id' => $stage->id]);
+        $this->assertSame(0, $project->fresh()->progress);
+    }
+
+    public function test_client_is_notified_when_a_stage_requires_approval(): void
+    {
+        Notification::fake();
+        [$owner, $client, , $project] = $this->actors();
+        $stage = $project->stages()->create([
+            'title' => 'Final review',
+            'position' => 1,
+            'requires_approval' => true,
+            'status' => 'in_progress',
+        ]);
+
+        $this->actingAs($owner)->patch(route('owner.projects.stages.update', [$project, $stage]), [
+            'status' => 'approval_required',
+            'requires_approval' => 1,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($client, PortalNotification::class);
+        $this->assertSame('approval_required', $stage->fresh()->status);
+        $this->actingAs($client)->get(route('client.projects.show', $project))
+            ->assertOk()
+            ->assertSee('Approve')
+            ->assertSee('Request changes');
     }
 
     public function test_invoice_supports_partial_and_full_payments_without_deletion(): void

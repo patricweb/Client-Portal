@@ -67,7 +67,9 @@ Route::prefix('owner')->name('owner.')->middleware(['auth', 'password.changed', 
     Route::resource('leads', LeadController::class)->except(['show', 'destroy'])->middleware('permission:manage_leads');
     Route::resource('companies', CompanyController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_clients');
     Route::resource('projects', OwnerProjectController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_projects');
+    Route::post('projects/{project}/stages', [OwnerProjectController::class, 'storeStage'])->middleware('permission:manage_projects')->name('projects.stages.store');
     Route::patch('projects/{project}/stages/{stage}', [OwnerProjectController::class, 'updateStage'])->middleware('permission:manage_projects')->name('projects.stages.update');
+    Route::delete('projects/{project}/stages/{stage}', [OwnerProjectController::class, 'destroyStage'])->middleware('permission:manage_projects')->name('projects.stages.destroy');
     Route::post('projects/{project}/attachments', [AttachmentController::class, 'store'])->middleware('permission:manage_projects')->name('projects.attachments.store');
     Route::resource('documents', OwnerDocumentController::class)->only(['index', 'create', 'store', 'show', 'update'])->middleware('permission:manage_documents');
     Route::post('documents/{document}/send', [OwnerDocumentController::class, 'send'])->middleware('permission:manage_documents')->name('documents.send');

@@ -8,8 +8,10 @@ use App\Models\BriefTemplate;
 use App\Models\Company;
 use App\Models\Project;
 use App\Models\ProjectStage;
+use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Services\ActivityLogger;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,11 @@ use Illuminate\View\View;
 
 class ProjectController extends Controller
 {
+    private const STAGE_STATUSES = [
+        'not_started', 'in_progress', 'approval_required', 'changes_requested',
+        'approved', 'completed', 'blocked',
+    ];
+
     public function index(Request $request): View
     {
         $query = Project::with('company')->latest();
@@ -70,23 +77,60 @@ class ProjectController extends Controller
         return view('owner.projects.show', ['project' => $project->load(['company.contacts', 'stages', 'brief.answers.field', 'attachments', 'workItems.assignee'])]);
     }
 
+    public function storeStage(Request $request, Project $project): RedirectResponse
+    {
+        abort_unless($request->user()->canAccessProject($project), 404);
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'client_description' => ['nullable', 'string', 'max:5000'],
+            'due_date' => ['nullable', 'date'],
+            'requires_approval' => ['required', 'boolean'],
+        ]);
+
+        $stage = $project->stages()->create($data + [
+            'position' => ((int) $project->stages()->max('position')) + 1,
+            'status' => 'not_started',
+        ]);
+        app(ActivityLogger::class)->log(
+            'project_stage.created',
+            'Project stage created: '.$stage->title,
+            $stage,
+            'internal',
+            [],
+            $project->company_id,
+            $project->id,
+        );
+        $this->recalculateProgress($project);
+
+        return back()->with('success', 'Project stage added.');
+    }
+
     public function updateStage(Request $request, Project $project, ProjectStage $stage): RedirectResponse
     {
         abort_unless($stage->project_id === $project->id, 404);
         abort_unless($request->user()->canAccessProject($project), 404);
         $data = $request->validate([
-            'status' => ['required', 'string'],
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'client_description' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'status' => ['required', Rule::in(self::STAGE_STATUSES)],
             'due_date' => ['nullable', 'date'],
+            'requires_approval' => ['sometimes', 'boolean'],
             'override_reason' => ['nullable', 'string', 'max:1000'],
         ]);
-        $isOverride = $stage->requires_approval && in_array($data['status'], ['approved', 'completed'], true);
+        $requiresApproval = $data['status'] === 'approval_required'
+            || (bool) ($data['requires_approval'] ?? $stage->requires_approval);
+        $isOverride = $requiresApproval && in_array($data['status'], ['approved', 'completed'], true);
         if ($isOverride) {
             $request->validate(['override_reason' => ['required', 'string', 'min:5', 'max:1000']]);
         }
 
+        $wasWaitingForApproval = $stage->status === 'approval_required';
         $stage->update([
+            'title' => $data['title'] ?? $stage->title,
+            'client_description' => array_key_exists('client_description', $data) ? $data['client_description'] : $stage->client_description,
             'status' => $data['status'],
             'due_date' => $data['due_date'] ?? null,
+            'requires_approval' => $requiresApproval,
             'approved_at' => $data['status'] === 'approved' ? now() : null,
         ]);
         if ($isOverride) {
@@ -100,11 +144,53 @@ class ProjectController extends Controller
                 $project->id,
             );
         }
+        if (! $wasWaitingForApproval && $data['status'] === 'approval_required') {
+            app(NotificationService::class)->send(
+                User::where('company_id', $project->company_id)->where('role', 'client')->get(),
+                'stage_approval_requested',
+                'action_required',
+                'Project stage ready for approval',
+                "{$project->name} — {$stage->title}",
+                route('client.projects.show', $project),
+                false,
+            );
+        }
 
-        $completed = $project->stages()->whereIn('status', ['approved', 'completed'])->count();
-        $total = max(1, $project->stages()->count());
-        $project->update(['progress' => (int) round(($completed / $total) * 100)]);
+        $this->recalculateProgress($project);
 
         return back()->with('success', 'Project stage updated.');
+    }
+
+    public function destroyStage(Request $request, Project $project, ProjectStage $stage): RedirectResponse
+    {
+        abort_unless($stage->project_id === $project->id, 404);
+        abort_unless($request->user()->canAccessProject($project), 404);
+        if ($stage->approvals()->exists()) {
+            return back()->withErrors(['stage' => 'A stage with a recorded client decision cannot be deleted.']);
+        }
+
+        app(ActivityLogger::class)->log(
+            'project_stage.deleted',
+            'Project stage deleted: '.$stage->title,
+            $stage,
+            'internal',
+            [],
+            $project->company_id,
+            $project->id,
+        );
+        $stage->delete();
+        $project->stages()->orderBy('position')->get()->each(
+            fn (ProjectStage $remainingStage, int $index) => $remainingStage->update(['position' => $index + 1])
+        );
+        $this->recalculateProgress($project);
+
+        return back()->with('success', 'Project stage deleted.');
+    }
+
+    private function recalculateProgress(Project $project): void
+    {
+        $total = $project->stages()->count();
+        $completed = $project->stages()->whereIn('status', ['approved', 'completed'])->count();
+        $project->update(['progress' => $total === 0 ? 0 : (int) round(($completed / $total) * 100)]);
     }
 }
