@@ -108,8 +108,10 @@ class PortalWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($owner)->post(route('owner.companies.store'), [
-            'name' => 'Acme Company', 'email' => 'hello@acme.test', 'timezone' => 'America/New_York',
+            'name' => 'Acme Company', 'billing_name' => 'Acme Company LLC', 'jurisdiction' => 'Delaware, United States',
+            'billing_address' => '100 Main Street, Wilmington, DE 19801, United States', 'email' => 'hello@acme.test', 'timezone' => 'America/New_York',
             'currency' => 'USD', 'contact_name' => 'John Smith', 'contact_email' => 'john@acme.test',
+            'contact_job_title' => 'Chief Executive Officer',
             'create_access' => 1,
         ])->assertRedirect();
 

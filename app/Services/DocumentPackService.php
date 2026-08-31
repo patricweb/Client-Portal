@@ -11,9 +11,9 @@ use Illuminate\Support\Str;
 class DocumentPackService
 {
     public const TEMPLATES = [
-        'project_confirmation' => ['title' => 'Project Confirmation', 'type' => 'project_confirmation', 'file' => '01_project_confirmation.md', 'prefix' => 'PC', 'parent' => null, 'parent_statuses' => []],
-        'change_confirmation' => ['title' => 'Change Confirmation', 'type' => 'change_confirmation', 'file' => '02_change_confirmation.md', 'prefix' => 'CC', 'parent' => 'project_confirmation', 'parent_statuses' => ['accepted']],
-        'delivery_confirmation' => ['title' => 'Delivery Confirmation', 'type' => 'delivery_confirmation', 'file' => '03_delivery_confirmation.md', 'prefix' => 'DC', 'parent' => 'project_confirmation', 'parent_statuses' => ['accepted']],
+        'project_confirmation' => ['title' => 'Project Services Agreement', 'type' => 'project_confirmation', 'file' => '01_project_confirmation.md', 'prefix' => 'PSA', 'parent' => null, 'parent_statuses' => ['accepted']],
+        'change_confirmation' => ['title' => 'Project Change Order', 'type' => 'change_confirmation', 'file' => '02_change_confirmation.md', 'prefix' => 'CO', 'parent' => 'project_confirmation', 'parent_statuses' => ['accepted']],
+        'delivery_confirmation' => ['title' => 'Delivery Acceptance Record', 'type' => 'delivery_confirmation', 'file' => '03_delivery_confirmation.md', 'prefix' => 'DA', 'parent' => 'project_confirmation', 'parent_statuses' => ['accepted']],
     ];
 
     public function definition(string $key): array
@@ -36,12 +36,16 @@ class DocumentPackService
         $definition = $this->definition($key);
         $number = $commercial['document_number'] ?? 'Assigned when the draft is created';
         $ids = [
+            'PROJECT SERVICES AGREEMENT ID' => $key === 'project_confirmation' ? $number : $parent?->document_number,
+            'CHANGE ORDER ID' => $key === 'change_confirmation' ? $number : null,
+            'DELIVERY ACCEPTANCE ID' => $key === 'delivery_confirmation' ? $number : null,
             'PROJECT CONFIRMATION ID' => $key === 'project_confirmation' ? $number : $parent?->document_number,
             'CHANGE CONFIRMATION ID' => $key === 'change_confirmation' ? $number : null,
             'DELIVERY CONFIRMATION ID' => $key === 'delivery_confirmation' ? $number : null,
         ];
         $defaults = [
             'CLIENT LEGAL NAME' => $company->billing_name ?: $company->name,
+            'CLIENT JURISDICTION' => $company->jurisdiction,
             'CLIENT ADDRESS' => $company->billing_address,
             'CLIENT NOTICE EMAIL' => $company->email,
             'CLIENT NAME' => $company->billing_name ?: $company->name,
@@ -57,9 +61,17 @@ class DocumentPackService
             'TARGET DATE' => $commercial['target_date'] ?? $project?->target_completion_date?->format('Y-m-d'),
             'TOTAL' => isset($commercial['price']) ? number_format((float) $commercial['price'], 2, '.', '') : null,
             'TO BE CONFIRMED' => $profile['tax_note'] ?? null,
+            'REVIEW PERIOD' => '5 business days',
+            'GOVERNING LAW AND FORUM' => 'the laws of the Republic of Moldova; exclusive courts located in Chisinau, Moldova',
+            'CANCELLATION TERMS' => 'Either party may terminate for a material breach not cured within 10 calendar days after written notice',
+            'PORTFOLIO USE' => 'Only with the Client\'s prior written permission',
+            'DATA ACCESS AND CATEGORIES' => 'Only the systems, accounts and data reasonably required for the included Services',
         ];
         $automatic = [
             'PROVIDER LEGAL NAME' => $profile['legal_name'] ?? '', 'PROVIDER ADDRESS' => $profile['address'] ?? '', 'PROVIDER EMAIL' => $profile['email'] ?? '',
+            'PROVIDER COUNTRY' => $profile['country'] ?? '', 'PROVIDER BUSINESS STATUS' => $profile['business_status'] ?? '',
+            'PROVIDER REGISTRATION ID' => $profile['registration_id'] ?? '',
+            'PAYMENT DUE DAYS' => (string) ($profile['payment_due_days'] ?? 7), 'BANK FEE RULE' => $profile['fee_rule'] ?? '',
         ] + array_filter($ids, fn ($value) => filled($value));
         if (filled($commercial['target_date'] ?? null)) {
             $automatic['DATE / ESTIMATE'] = $commercial['target_date'];

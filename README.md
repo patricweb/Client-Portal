@@ -76,9 +76,9 @@ Default ports can be changed in `.env`:
 
 The credentials in `.env.example` are for local development only. Replace all secrets before deployment.
 
-## Simple client confirmations
+## Business agreements and acceptance
 
-The portal uses three short records: **Project Confirmation**, an optional **Change Confirmation**, and **Delivery Confirmation**. Each client decision is tied to an immutable PDF version and audit metadata. Invoices remain separate. Start with **Provider settings**, then **Confirmations → New confirmation**. See the [operator guide](docs/DOCUMENT_WORKFLOW.md) before issuing real records.
+The portal uses a binding **Project Services Agreement**, an optional **Project Change Order**, and a **Delivery Acceptance Record**. Client acceptance is tied to an immutable PDF version, its SHA-256 hash, the representative's authority statement and audit metadata. Invoices remain separate. Start with **Provider settings**, then **Agreements & records → New agreement / record**. See the [operator guide](docs/DOCUMENT_WORKFLOW.md) before issuing real documents.
 
 ## Production deployment
 

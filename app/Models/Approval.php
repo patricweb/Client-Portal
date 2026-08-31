@@ -10,7 +10,7 @@ class Approval extends Model
 
     protected function casts(): array
     {
-        return ['decided_at' => 'datetime'];
+        return ['decided_at' => 'datetime', 'evidence' => 'array'];
     }
 
     public function approvable()

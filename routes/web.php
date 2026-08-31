@@ -65,7 +65,7 @@ Route::prefix('owner')->name('owner.')->middleware(['auth', 'password.changed', 
     Route::get('documents/{document}/builder', [DocumentPackController::class, 'edit'])->middleware('permission:manage_documents')->name('document-pack.edit');
     Route::put('documents/{document}/builder', [DocumentPackController::class, 'update'])->middleware('permission:manage_documents')->name('document-pack.update');
     Route::resource('leads', LeadController::class)->except(['show', 'destroy'])->middleware('permission:manage_leads');
-    Route::resource('companies', CompanyController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_clients');
+    Route::resource('companies', CompanyController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update'])->middleware('permission:manage_clients');
     Route::resource('projects', OwnerProjectController::class)->only(['index', 'create', 'store', 'show'])->middleware('permission:manage_projects');
     Route::post('projects/{project}/stages', [OwnerProjectController::class, 'storeStage'])->middleware('permission:manage_projects')->name('projects.stages.store');
     Route::patch('projects/{project}/stages/{stage}', [OwnerProjectController::class, 'updateStage'])->middleware('permission:manage_projects')->name('projects.stages.update');

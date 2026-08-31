@@ -4,8 +4,10 @@
     <section class="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-3 sm:p-6"><div class="document-preview">{!! app(\App\Services\DocumentHtmlService::class)->clean($currentVersion->content) !!}</div></section>
     @if($isCurrent && $document->status === 'awaiting_approval')
         <section class="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-            <h2 class="font-semibold">Confirm this exact version</h2>
-            <p class="mt-2 text-sm">Review the PDF before deciding. Your portal decision is stored with this version, your account, date, time and IP address. Payment or silence is not confirmation.</p>
+            @php($decisionLabels = ['project_confirmation' => ['Review and accept agreement', 'Accept agreement'], 'change_confirmation' => ['Review and accept change order', 'Accept change order'], 'delivery_confirmation' => ['Review and accept delivery', 'Accept delivery']])
+            @php([$decisionHeading, $decisionButton] = $decisionLabels[$document->type] ?? ['Confirm this exact version', 'Confirm this version'])
+            <h2 class="font-semibold">{{ $decisionHeading }}</h2>
+            <p class="mt-2 text-sm">Review and download the PDF before deciding. The portal stores the exact version, PDF hash, account, representative, time and IP address. Payment or silence is not acceptance.</p>
             @if($currentVersion->snapshot['minor_items'] ?? null)
                 <p class="mt-3 whitespace-pre-wrap text-sm">Agreed minor items and dates:
 {{ $currentVersion->snapshot['minor_items'] }}</p>
@@ -16,10 +18,10 @@
                 <label class="block text-sm">Comment<textarea name="comment" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 p-3" placeholder="Required when requesting changes"></textarea></label>
                 <label class="flex items-start gap-2 rounded-lg bg-white p-3 text-sm">
                     <input class="mt-1" type="checkbox" name="confirm_intent" value="1">
-                    <span>I reviewed this PDF and intend to confirm this exact version. I can download and keep a copy.</span>
+                    <span>I reviewed this exact PDF, am authorized to bind {{ $document->company->billing_name }}, and intend to accept it. I can download and keep a copy.</span>
                 </label>
                 <div class="flex flex-wrap gap-3">
-                    <button name="decision" value="approved" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">{{ $document->type === 'delivery_confirmation' ? 'Confirm delivery' : 'Confirm this version' }}</button>
+                    <button name="decision" value="approved" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">{{ $decisionButton }}</button>
                     @if(in_array($document->type, ['delivery_confirmation', 'delivery_acceptance'], true) && filled($currentVersion->snapshot['minor_items'] ?? null))
                         <button name="decision" value="accepted_with_minor_items" class="rounded-lg bg-amber-600 px-4 py-2 text-sm text-white">Confirm with the agreed minor items</button>
                     @endif

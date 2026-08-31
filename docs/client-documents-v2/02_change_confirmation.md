@@ -1,26 +1,26 @@
-# Change Confirmation
+# Project Change Order
 
-Document: [CHANGE CONFIRMATION ID]
+Change Order: [CHANGE ORDER ID]
 
-Related project confirmation: [PROJECT CONFIRMATION ID]
+Related Project Services Agreement: [PROJECT SERVICES AGREEMENT ID]
 
 Project: [PROJECT NAME]
 
-This page records one agreed change to the project. Everything in the accepted Project Confirmation remains unchanged unless this page says otherwise.
+This Project Change Order amends the accepted Project Services Agreement identified above. All terms not changed here remain effective.
 
 ## Requested change
 
 [REQUESTED CHANGE]
 
-## Scope effect
+## Scope change
 
 Added or changed work: [ADDED OR CHANGED WORK]
 
-Removed work, if any: [REMOVED WORK OR NONE]
+Removed work: [REMOVED WORK OR NONE]
 
 Updated exclusions: [UPDATED EXCLUSIONS OR NO CHANGE]
 
-## Price effect
+## Commercial change
 
 Previous project total: USD [PREVIOUS TOTAL]
 
@@ -30,12 +30,10 @@ New project total: USD [NEW TOTAL]
 
 Payment effect: [PAYMENT EFFECT]
 
-## Timing effect
-
 Updated target date: [TARGET DATE]
 
-Reason or dependency: [TIMING EFFECT]
+Timing reason or dependency: [TIMING EFFECT]
 
-## Confirmation
+## Acceptance
 
-By choosing **Confirm this version** in the portal, the Client confirms this change and the new project total and timing shown above. If the change is not correct, choose **Request changes** before the Provider starts the added work.
+By selecting **Accept change order** and confirming authority, the Client accepts this exact version and authorizes the Provider to perform the changed work. The portal records the document number, PDF hash, version, representative, time, IP address and decision. Select **Request changes** if it is not correct.

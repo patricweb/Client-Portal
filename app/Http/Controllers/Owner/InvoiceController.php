@@ -65,10 +65,10 @@ class InvoiceController extends Controller
         abort_if($project && $project->company_id !== (int) $data['company_id'], 422, 'Project does not belong to company.');
         $sow = isset($data['sow_document_id']) ? Document::findOrFail($data['sow_document_id']) : null;
         if ($sow) {
-            abort_unless(in_array($sow->type, ['project_confirmation', 'scope_of_work'], true) && in_array($sow->status, ['accepted', 'signed'], true) && $sow->company_id === (int) $data['company_id'] && $sow->project_id === $project?->id, 422, 'Project Confirmation does not match this client / project.');
+            abort_unless(in_array($sow->type, ['project_confirmation', 'scope_of_work'], true) && in_array($sow->status, ['accepted', 'signed'], true) && $sow->company_id === (int) $data['company_id'] && $sow->project_id === $project?->id, 422, 'Project Services Agreement does not match this client / project.');
         }
         $acceptance = isset($data['acceptance_document_id']) ? Document::findOrFail($data['acceptance_document_id']) : null;
-        abort_if($acceptance && (! in_array($acceptance->type, ['delivery_confirmation', 'delivery_acceptance'], true) || $acceptance->parent_document_id !== $sow?->id), 422, 'Delivery Confirmation must refer to the selected Project Confirmation.');
+        abort_if($acceptance && (! in_array($acceptance->type, ['delivery_confirmation', 'delivery_acceptance'], true) || $acceptance->parent_document_id !== $sow?->id), 422, 'Delivery Acceptance Record must refer to the selected Project Services Agreement.');
         if ($sow) {
             $data['snapshot'] = [
                 'provider' => ProviderProfile::current()->details,

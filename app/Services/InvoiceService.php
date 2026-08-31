@@ -85,20 +85,20 @@ class InvoiceService
         $agreement = Document::lockForUpdate()->find($invoice->sow_document_id);
         $validAgreement = $agreement && (($agreement->type === 'project_confirmation' && $agreement->status === 'accepted') || ($agreement->type === 'scope_of_work' && $agreement->status === 'signed'));
         if (! $validAgreement || $agreement->company_id !== $invoice->company_id || $agreement->project_id !== $invoice->project_id) {
-            throw ValidationException::withMessages(['sow_document_id' => 'An accepted Project Confirmation for this client and project is required.']);
+            throw ValidationException::withMessages(['sow_document_id' => 'An accepted Project Services Agreement for this client and project is required.']);
         }
         $snapshotAgreementVersion = $invoice->snapshot['agreement_version'] ?? $invoice->snapshot['sow_version'] ?? null;
         if ($snapshotAgreementVersion !== $agreement->current_version) {
-            throw ValidationException::withMessages(['sow_document_id' => 'The Project Confirmation version changed. Recreate this unissued draft from the current accepted version.']);
+            throw ValidationException::withMessages(['sow_document_id' => 'The Project Services Agreement version changed. Recreate this unissued draft from the current accepted version.']);
         }
         if ($invoice->currency !== ($agreement->currentVersionRecord()?->snapshot['commercial']['currency'] ?? $agreement->project?->currency)) {
-            throw ValidationException::withMessages(['currency' => 'Invoice currency must match the Project Confirmation.']);
+            throw ValidationException::withMessages(['currency' => 'Invoice currency must match the Project Services Agreement.']);
         }
         if ($invoice->kind === 'final') {
             $acceptance = Document::find($invoice->acceptance_document_id);
             $deliveryVersion = $invoice->snapshot['delivery_version'] ?? $invoice->snapshot['acceptance_version'] ?? null;
             if (! $acceptance || ! in_array($acceptance->type, ['delivery_confirmation', 'delivery_acceptance'], true) || $acceptance->company_id !== $invoice->company_id || $acceptance->parent_document_id !== $agreement->id || ! in_array($acceptance->status, ['accepted', 'accepted_with_minor_items']) || ($acceptance->currentVersionRecord()?->snapshot['parent_version'] ?? null) !== $agreement->current_version || $deliveryVersion !== $acceptance->current_version) {
-                throw ValidationException::withMessages(['acceptance_document_id' => 'Final billing requires explicit confirmation of delivery for this Project Confirmation version.']);
+                throw ValidationException::withMessages(['acceptance_document_id' => 'Final billing requires a Delivery Acceptance Record for this Project Services Agreement version.']);
             }
         }
         $alreadyInvoiced = (float) Invoice::where('sow_document_id', $agreement->id)->whereNotIn('status', ['draft', 'void'])->whereKeyNot($invoice->id)->sum('total');

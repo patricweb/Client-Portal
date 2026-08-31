@@ -18,9 +18,12 @@ class ProviderProfile extends Model
         return static::findOrFail(1);
     }
 
-    public function missing(bool $bank = false): array
+    public function missing(bool $bank = false, bool $business = false): array
     {
         $required = ['legal_name', 'address', 'country', 'email', 'details_confirmed'];
+        if ($business) {
+            $required = array_merge($required, ['business_status', 'registration_id']);
+        }
         if ($bank) {
             $required = array_merge($required, ['bank_name', 'beneficiary', 'iban', 'swift', 'currency', 'bank_confirmed']);
         }

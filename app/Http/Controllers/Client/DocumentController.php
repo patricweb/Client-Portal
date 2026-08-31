@@ -62,10 +62,29 @@ class DocumentController extends Controller
             if ($data['decision'] === 'accepted_with_minor_items') {
                 $comment = "Agreed minor items:\n".$minorItems."\nClient note: ".$comment;
             }
+            $user = $request->user();
+            $company = $document->company;
+            $contact = $company->contacts()->where('user_id', $user->id)->first()
+                ?? $company->contacts()->where('email', $user->email)->first();
+            $labels = [
+                'project_confirmation' => 'Project Services Agreement',
+                'change_confirmation' => 'Project Change Order',
+                'delivery_confirmation' => 'Delivery Acceptance Record',
+            ];
+            $record = $labels[$document->type] ?? 'document';
+            $intent = $data['decision'] === 'changes_requested'
+                ? "I am requesting changes to this exact {$record} version."
+                : "I am authorized to bind {$company->billing_name} and accept this exact {$record} version.";
             $document->approvals()->create([
                 'decision' => $data['decision'], 'comment' => $comment,
                 'version' => $document->current_version, 'user_id' => $request->user()->id,
                 'decided_at' => now(), 'ip_address' => $request->ip(), 'user_agent' => $request->userAgent(),
+                'evidence' => [
+                    'intent_text' => $intent, 'signer_name' => $user->name, 'signer_email' => $user->email,
+                    'signer_title' => $contact?->job_title, 'company_legal_name' => $company->billing_name,
+                    'company_jurisdiction' => $company->jurisdiction, 'document_number' => $document->document_number,
+                    'version' => $document->current_version, 'pdf_sha256' => $version->pdf_sha256,
+                ],
             ]);
             $version->update(['locked_at' => $version->locked_at ?? now(), 'published_at' => $version->published_at ?? now()]);
             if ($data['decision'] !== 'changes_requested') {

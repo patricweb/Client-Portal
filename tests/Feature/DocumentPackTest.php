@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\Company;
+use App\Models\CompanyContact;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Project;
@@ -43,7 +44,7 @@ class DocumentPackTest extends TestCase
         $this->assertSame('Matei Patric', ProviderProfile::current()->details['legal_name']);
     }
 
-    public function test_only_three_simple_confirmation_templates_are_offered(): void
+    public function test_only_three_business_agreement_templates_are_offered(): void
     {
         [$owner, $client, $company, $project] = $this->actors();
 
@@ -80,6 +81,17 @@ class DocumentPackTest extends TestCase
         $this->assertSame('Matei Patric', $version->fresh()->snapshot['provider']['legal_name']);
     }
 
+    public function test_project_agreement_contains_core_business_terms(): void
+    {
+        [$owner, , $company, $project] = $this->actors();
+        $this->completeProfile();
+        $content = $this->makePack($owner, $company, $project, 'project_confirmation')->currentVersionRecord()->content;
+
+        foreach (['binding business-to-business agreement', 'Intellectual property', 'Confidentiality and data', 'liability', 'Governing law and forum', 'authority to bind'] as $term) {
+            $this->assertStringContainsStringIgnoringCase($term, $content);
+        }
+    }
+
     public function test_client_confirmation_requires_explicit_intent_and_records_exact_version(): void
     {
         [$owner, $client, $company, $project] = $this->actors();
@@ -98,6 +110,9 @@ class DocumentPackTest extends TestCase
         $this->assertSame($client->id, $approval->user_id);
         $this->assertNotNull($approval->decided_at);
         $this->assertNotNull($document->currentVersionRecord()->pdf_sha256);
+        $this->assertSame('Chief Executive Officer', $approval->evidence['signer_title']);
+        $this->assertStringContainsString('authorized to bind Acme Test LLC', $approval->evidence['intent_text']);
+        $this->assertSame($document->currentVersionRecord()->pdf_sha256, $approval->evidence['pdf_sha256']);
     }
 
     public function test_sent_pdf_is_stable_and_new_draft_is_hidden_from_client(): void
@@ -244,8 +259,9 @@ class DocumentPackTest extends TestCase
     private function actors(): array
     {
         $owner = User::factory()->create(['role' => UserRole::Owner, 'status' => AccountStatus::Active, 'must_change_password' => false]);
-        $company = Company::create(['name' => 'Acme Test', 'billing_name' => 'Acme Test LLC', 'billing_address' => '100 Test Street, Test City, USA', 'email' => 'client@example.test', 'currency' => 'USD']);
+        $company = Company::create(['name' => 'Acme Test', 'billing_name' => 'Acme Test LLC', 'jurisdiction' => 'Delaware, United States', 'billing_address' => '100 Test Street, Test City, USA', 'email' => 'client@example.test', 'currency' => 'USD']);
         $client = User::factory()->create(['company_id' => $company->id, 'role' => UserRole::Client, 'status' => AccountStatus::Active, 'must_change_password' => false]);
+        CompanyContact::create(['company_id' => $company->id, 'user_id' => $client->id, 'name' => $client->name, 'email' => $client->email, 'job_title' => 'Chief Executive Officer', 'is_primary' => true]);
         $project = Project::create(['company_id' => $company->id, 'name' => 'Test website', 'type' => 'website', 'price' => 1000, 'currency' => 'USD', 'description' => 'A test project', 'scope' => 'One responsive website', 'exclusions' => 'Hosting']);
 
         return [$owner, $client, $company, $project];
@@ -255,6 +271,7 @@ class DocumentPackTest extends TestCase
     {
         ProviderProfile::current()->update(['details' => array_replace(ProviderProfile::current()->details, [
             'address' => 'Test address, Moldova', 'email' => 'provider@example.test', 'details_confirmed' => true,
+            'business_status' => 'Independent registered service provider', 'registration_id' => 'TEST-REG-001',
             'bank_name' => 'TEST BANK', 'beneficiary' => 'Matei Patric', 'iban' => 'TEST-ACCOUNT', 'swift' => 'TEST', 'bank_confirmed' => true,
             'tax_note' => 'No tax charged - test fixture',
         ])]);

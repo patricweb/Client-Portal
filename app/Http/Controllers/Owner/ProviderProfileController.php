@@ -12,7 +12,7 @@ class ProviderProfileController extends Controller
     public const FIELDS = [
         'legal_name' => 'Legal name / contracting person', 'brand_name' => 'Display brand (not the contracting party)',
         'address' => 'Legal / correspondence address', 'country' => 'Country', 'email' => 'Business contact email',
-        'registration_id' => 'Registration / tax identifier, if applicable', 'tax_note' => 'Verified invoice tax treatment',
+        'business_status' => 'Contracting status / legal capacity', 'registration_id' => 'Business registration / tax identifier', 'tax_note' => 'Verified invoice tax treatment',
         'beneficiary' => 'Bank-confirmed beneficiary name', 'bank_name' => 'Bank legal name',
         'iban' => 'Account / IBAN', 'swift' => 'SWIFT / BIC', 'bank_address' => 'Bank address, if required',
         'correspondent' => 'Correspondent instructions, if required', 'fee_rule' => 'Agreed default bank-fee allocation',
@@ -30,10 +30,11 @@ class ProviderProfileController extends Controller
         $rules['email'] = ['nullable', 'email', 'max:255'];
         $data = $request->validate($rules + [
             'currency' => ['required', 'in:USD,EUR,MDL'], 'payment_due_days' => ['required', 'integer', 'min:1', 'max:90'],
-            'details_confirmed' => ['nullable', 'accepted'], 'bank_confirmed' => ['nullable', 'accepted'],
+            'details_confirmed' => ['nullable', 'accepted'], 'bank_confirmed' => ['nullable', 'accepted'], 'us_tax_form_ready' => ['nullable', 'boolean'],
         ]);
         $data['details_confirmed'] = $request->boolean('details_confirmed');
         $data['bank_confirmed'] = $request->boolean('bank_confirmed');
+        $data['us_tax_form_ready'] = $request->boolean('us_tax_form_ready');
         $profile = ProviderProfile::current();
         $profile->update(['details' => $data]);
         app(ActivityLogger::class)->log('provider.updated', 'Provider profile updated. Existing snapshots are unchanged.', $profile, 'internal');

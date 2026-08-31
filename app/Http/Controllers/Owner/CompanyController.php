@@ -29,7 +29,7 @@ class CompanyController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validated($request);
+        $data = $this->validated($request, true);
         $temporaryPassword = Str::password(16);
 
         $company = DB::transaction(function () use ($data, $temporaryPassword) {
@@ -46,7 +46,8 @@ class CompanyController extends Controller
 
             CompanyContact::create([
                 'company_id' => $company->id, 'user_id' => $user?->id, 'name' => $data['contact_name'],
-                'email' => $data['contact_email'], 'phone' => $data['contact_phone'] ?? null, 'is_primary' => true,
+                'email' => $data['contact_email'], 'phone' => $data['contact_phone'] ?? null,
+                'job_title' => $data['contact_job_title'], 'is_primary' => true,
             ]);
 
             return $company;
@@ -65,15 +66,43 @@ class CompanyController extends Controller
         return view('owner.companies.show', ['company' => $company->load(['contacts.user', 'projects.stages'])]);
     }
 
-    private function validated(Request $request): array
+    public function edit(Company $company): View
+    {
+        return view('owner.companies.edit', ['company' => $company->load('contacts.user'), 'contact' => $company->contacts()->where('is_primary', true)->firstOrFail()]);
+    }
+
+    public function update(Request $request, Company $company): RedirectResponse
+    {
+        $contact = $company->contacts()->where('is_primary', true)->firstOrFail();
+        $data = $this->validated($request, false, $contact);
+
+        DB::transaction(function () use ($company, $contact, $data) {
+            $company->update(collect($data)->except(['contact_name', 'contact_email', 'contact_phone', 'contact_job_title', 'create_access'])->all());
+            $contact->update([
+                'name' => $data['contact_name'],
+                'email' => $data['contact_email'],
+                'phone' => $data['contact_phone'] ?? null,
+                'job_title' => $data['contact_job_title'],
+            ]);
+            $contact->user?->update(['name' => $data['contact_name'], 'email' => $data['contact_email']]);
+        });
+
+        return redirect()->route('owner.companies.show', $company)->with('success', 'Client legal and contact details updated. Existing document snapshots are unchanged.');
+    }
+
+    private function validated(Request $request, bool $creating, ?CompanyContact $contact = null): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:255'], 'billing_name' => ['nullable', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'], 'billing_name' => ['required', 'string', 'max:255'],
+            'jurisdiction' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email'], 'phone' => ['nullable', 'string', 'max:50'], 'website' => ['nullable', 'url'],
-            'billing_address' => ['nullable', 'string'], 'timezone' => ['required', 'timezone'],
+            'billing_address' => ['required', 'string', 'max:2000'], 'timezone' => ['required', 'timezone'],
             'currency' => ['required', Rule::in(['USD', 'EUR', 'MDL'])], 'internal_notes' => ['nullable', 'string'],
-            'contact_name' => ['required', 'string', 'max:255'], 'contact_email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'contact_phone' => ['nullable', 'string', 'max:50'], 'create_access' => ['nullable', 'boolean'],
+            'contact_name' => ['required', 'string', 'max:255'],
+            'contact_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($contact?->user_id)],
+            'contact_job_title' => ['required', 'string', 'max:255'],
+            'contact_phone' => ['nullable', 'string', 'max:50'],
+            'create_access' => [$creating ? 'nullable' : 'exclude', 'boolean'],
         ]);
     }
 }

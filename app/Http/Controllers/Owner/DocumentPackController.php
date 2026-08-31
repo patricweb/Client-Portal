@@ -88,7 +88,7 @@ class DocumentPackController extends Controller
         $project = isset($data['project_id']) ? Project::findOrFail($data['project_id']) : null;
         abort_if($project && $project->company_id !== $company->id, 422, 'Project does not belong to this client.');
         abort_if($project && $project->currency !== 'USD', 422, 'This document pack uses USD. Use a reviewed custom template for another currency.');
-        abort_unless($project, 422, 'Select a project for this confirmation.');
+        abort_unless($project, 422, 'Select a project for this agreement or record.');
         $parent = isset($data['parent_document_id']) ? Document::findOrFail($data['parent_document_id']) : null;
         if ($parent) {
             $this->validateParent($parent, $company, $project, $definition);
@@ -137,7 +137,7 @@ class DocumentPackController extends Controller
 
     private function validateParent(Document $parent, ?Company $company, ?Project $project, array $definition): void
     {
-        abort_unless($company && $parent->company_id === $company->id && $parent->type === $definition['parent'], 422, 'The related confirmation must match this client and document type.');
-        abort_unless($parent->project_id === $project?->id && in_array($parent->status, $definition['parent_statuses'], true), 422, 'Select the accepted Project Confirmation for this project.');
+        abort_unless($company && $parent->company_id === $company->id && $parent->type === $definition['parent'], 422, 'The related agreement must match this client and document type.');
+        abort_unless($parent->project_id === $project?->id && in_array($parent->status, $definition['parent_statuses'], true), 422, 'Select the accepted Project Services Agreement for this project.');
     }
 }

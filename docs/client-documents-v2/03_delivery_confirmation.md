@@ -1,12 +1,12 @@
-# Delivery Confirmation
+# Delivery Acceptance Record
 
-Document: [DELIVERY CONFIRMATION ID]
+Delivery Record: [DELIVERY ACCEPTANCE ID]
 
-Related project confirmation: [PROJECT CONFIRMATION ID]
+Related Project Services Agreement: [PROJECT SERVICES AGREEMENT ID]
 
 Project: [PROJECT NAME]
 
-This page records what was delivered and the Client's review decision for this project version.
+This record identifies the delivered version and the Client's review decision. It does not confirm payment or replace an invoice.
 
 ## Delivered items
 
@@ -26,12 +26,12 @@ Known limitations or open items: [KNOWN LIMITATIONS OR NONE]
 
 Files, access and materials transferred: [HANDOVER ITEMS]
 
-Credentials delivery channel, if needed: [SECURE CREDENTIAL CHANNEL OR NONE]
+Secure credential delivery channel, if needed: [SECURE CREDENTIAL CHANNEL OR NONE]
 
 Support or care starting after delivery: [SUPPORT NEXT STEP OR NONE]
 
 ## Client decision
 
-Choose **Confirm delivery** only after reviewing this exact version. The decision confirms receipt and acceptance of the listed delivery. It does not confirm payment and does not replace any separate invoice.
+By selecting **Accept delivery** and confirming authority, the Client confirms that it reviewed and accepts this exact delivered version under the related Project Services Agreement. The portal records the document number, PDF hash, version, representative, time, IP address and decision.
 
-If something material is missing or does not match the accepted Project Confirmation, use Request changes and describe the issue. If only listed minor items remain, the Client may confirm delivery with those exact items and dates recorded by the Provider.
+Select **Request changes** for a material mismatch. If only the Provider-listed minor items remain, the Client may accept with those exact items and completion dates recorded in the portal.

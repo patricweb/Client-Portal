@@ -17,8 +17,8 @@ class DocumentWorkflowService
         $snapshot = $version->snapshot ?? [];
         if ($document->pack_template) {
             $profile = new ProviderProfile(['details' => $snapshot['provider'] ?? []]);
-            if ($profile->missing()) {
-                throw ValidationException::withMessages(['provider' => 'Complete and confirm the provider profile, then create a revised draft to capture those details.']);
+            if ($profile->missing(business: true)) {
+                throw ValidationException::withMessages(['provider' => 'Complete and confirm the provider legal identity, contracting status and registration identifier, then create a revised draft.']);
             }
             if (! empty($snapshot['missing_fields'])) {
                 throw ValidationException::withMessages(['fields' => 'Complete the highlighted fields in Edit details before sending: '.implode(', ', array_unique($snapshot['missing_fields']))]);
@@ -30,7 +30,7 @@ class DocumentWorkflowService
                 $validParentStatus = in_array($parent?->status, $definition['parent_statuses'] ?? ['signed'], true);
                 $parentFinalized = $parentVersion && ($parentVersion->signed_at || $parentVersion->locked_at);
                 if (! $parent || $parent->id !== ($snapshot['parent_id'] ?? null) || $parent->company_id !== $document->company_id || $parent->project_id !== $document->project_id || $parent->type !== $definition['parent'] || ! $validParentStatus || ! $parentFinalized) {
-                    throw ValidationException::withMessages(['parent_document_id' => 'Link the accepted Project Confirmation and save a revised draft before sending.']);
+                    throw ValidationException::withMessages(['parent_document_id' => 'Link the accepted Project Services Agreement and save a revised draft before sending.']);
                 }
             }
         }

@@ -35,7 +35,8 @@ class DocumentService
     {
         return [
             'provider' => ProviderProfile::current()->details,
-            'company' => $company->only(['id', 'name', 'billing_name', 'email', 'billing_address', 'currency']),
+            'company' => $company->only(['id', 'name', 'billing_name', 'jurisdiction', 'email', 'billing_address', 'currency']),
+            'primary_contact' => $company->contacts()->where('is_primary', true)->first()?->only(['id', 'user_id', 'name', 'email', 'job_title']),
             'project' => $project?->only(['id', 'name', 'type', 'description', 'scope', 'exclusions', 'price', 'currency', 'target_completion_date']),
             'generated_at' => now()->toIso8601String(),
         ];
