@@ -33,7 +33,7 @@ class CompanyController extends Controller
         $temporaryPassword = Str::password(16);
 
         $company = DB::transaction(function () use ($data, $temporaryPassword) {
-            $company = Company::create(collect($data)->except(['contact_name', 'contact_email', 'contact_phone', 'create_access'])->all());
+            $company = Company::create(collect($data)->except(['contact_name', 'contact_email', 'contact_phone', 'contact_job_title', 'create_access'])->all());
             $user = null;
 
             if ($data['create_access'] ?? false) {
