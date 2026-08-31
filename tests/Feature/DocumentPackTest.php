@@ -273,7 +273,7 @@ class DocumentPackTest extends TestCase
             'address' => 'Test address, Moldova', 'email' => 'provider@example.test', 'details_confirmed' => true,
             'business_status' => 'Independent registered service provider', 'registration_id' => 'TEST-REG-001',
             'bank_name' => 'TEST BANK', 'beneficiary' => 'Matei Patric', 'iban' => 'TEST-ACCOUNT', 'swift' => 'TEST', 'bank_confirmed' => true,
-            'tax_note' => 'No tax charged - test fixture',
+            'tax_note' => 'No tax charged - test fixture', 'fee_rule' => 'Client pays sending and intermediary bank fees',
         ])]);
     }
 
